@@ -10,6 +10,10 @@ import pymysql, pymysql.cursors, decimal
 from datetime import date, datetime, timedelta
 from functools import wraps
 from security import hash_password, verify_password
+import threading
+import time
+import urllib.request
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -19,6 +23,11 @@ DB_USER     = "root"
 DB_PASSWORD = ""
 DB_NAME     = "cafe"
 DB_PORT     = 3306
+
+# ── Konfigurasi Resend API & Laporan Otomatis ────────────────
+RESEND_API_KEY = "re_KaTaQNWQ_EJvAZLzSKgJE3nyiEUZHJ2Nx"
+RESEND_SENDER  = "Kopi Sibei <onboarding@resend.dev>"
+AUTO_REPORT_TIME = "00:00"  # Format HH:MM (24 jam)
 
 # ── Koneksi ──────────────────────────────────────────────────
 def get_db():
@@ -605,6 +614,347 @@ def delete_absensi(id_absensi):
     finally:
         if conn: conn.close()
 
+# ── Fungsi Pendukung Laporan Penjualan (HTML & Resend API) ────
+def format_idr_py(val):
+    return f"Rp {val:,.0f}".replace(",", ".")
+
+def build_sales_report_html(start_date, end_date):
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT SUM(total_harga) as total_revenue, COUNT(id_transaksi) as total_tx "
+                "FROM transaksi WHERE DATE(tanggal_transaksi) BETWEEN %s AND %s",
+                (start_date, end_date)
+            )
+            summary = cur.fetchone()
+            total_revenue = summary['total_revenue'] or 0
+            total_tx = summary['total_tx'] or 0
+
+            cur.execute(
+                "SELECT metode_pembayaran, SUM(total_harga) as total_amount, COUNT(id_transaksi) as count_tx "
+                "FROM transaksi WHERE DATE(tanggal_transaksi) BETWEEN %s AND %s "
+                "GROUP BY metode_pembayaran",
+                (start_date, end_date)
+            )
+            methods_data = cur.fetchall()
+            methods_summary = {"Cash": {"amount": 0, "count": 0}, "QRIS": {"amount": 0, "count": 0}, "Debit": {"amount": 0, "count": 0}}
+            for m in methods_data:
+                m_name = m['metode_pembayaran']
+                if m_name in methods_summary:
+                    methods_summary[m_name]["amount"] = m['total_amount'] or 0
+                    methods_summary[m_name]["count"] = m['count_tx'] or 0
+
+            cur.execute(
+                "SELECT p.nama_produk, SUM(dt.qty) as total_qty "
+                "FROM detail_transaksi dt "
+                "JOIN products p ON dt.id_products = p.id_products "
+                "JOIN transaksi t ON dt.id_transaksi = t.id_transaksi "
+                "WHERE DATE(t.tanggal_transaksi) BETWEEN %s AND %s "
+                "GROUP BY dt.id_products, p.nama_produk "
+                "ORDER BY total_qty DESC LIMIT 5",
+                (start_date, end_date)
+            )
+            top_menus = cur.fetchall()
+
+            cur.execute(
+                "SELECT u.nama, SUM(t.total_harga) as total_sales, COUNT(t.id_transaksi) as total_tx "
+                "FROM transaksi t "
+                "JOIN users u ON t.id_user = u.id_user "
+                "WHERE DATE(t.tanggal_transaksi) BETWEEN %s AND %s "
+                "GROUP BY t.id_user, u.nama "
+                "ORDER BY total_sales DESC",
+                (start_date, end_date)
+            )
+            top_cashiers = cur.fetchall()
+
+            cur.execute(
+                "SELECT t.id_transaksi, t.tanggal_transaksi, u.nama as nama_kasir, t.total_harga, t.metode_pembayaran "
+                "FROM transaksi t "
+                "LEFT JOIN users u ON t.id_user=u.id_user "
+                "WHERE DATE(t.tanggal_transaksi) BETWEEN %s AND %s "
+                "ORDER BY t.id_transaksi ASC",
+                (start_date, end_date)
+            )
+            tx_details = cur.fetchall()
+            
+            date_label = start_date if start_date == end_date else f"{start_date} s/d {end_date}"
+
+            html = f"""
+            <html>
+            <body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f7f5f2; color: #4a3e3d; margin: 0; padding: 20px;">
+                <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); border: 1px solid #e1dcd6;">
+                    
+                    <!-- Header -->
+                    <div style="background-color: #4a3321; padding: 24px; text-align: center; color: #ffffff;">
+                        <span style="font-size: 28px; display: block; margin-bottom: 6px;">☕</span>
+                        <h2 style="margin: 0; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; letter-spacing: 0.5px;">Laporan Penjualan Kopi Sibei</h2>
+                        <p style="margin: 4px 0 0; font-size: 14px; opacity: 0.9;">Periode: {date_label}</p>
+                    </div>
+
+                    <div style="padding: 24px;">
+                        <!-- Ringkasan Grid -->
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                            <tr>
+                                <td style="width: 48%; padding: 12px; background-color: #fcf9f6; border-radius: 8px; border: 1px solid #f0e9df; text-align: center;">
+                                    <span style="font-size: 12px; text-transform: uppercase; color: #8e7c77; font-weight: 600; display: block; margin-bottom: 4px;">Total Pendapatan</span>
+                                    <strong style="font-size: 20px; color: #2e7d32; display: block;">{format_idr_py(total_revenue)}</strong>
+                                </td>
+                                <td style="width: 4%;"></td>
+                                <td style="width: 48%; padding: 12px; background-color: #fcf9f6; border-radius: 8px; border: 1px solid #f0e9df; text-align: center;">
+                                    <span style="font-size: 12px; text-transform: uppercase; color: #8e7c77; font-weight: 600; display: block; margin-bottom: 4px;">Total Transaksi</span>
+                                    <strong style="font-size: 20px; color: #4a3321; display: block;">{total_tx} Tx</strong>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- Metode Pembayaran -->
+                        <h3 style="border-bottom: 2px solid #f0e9df; padding-bottom: 6px; margin-top: 0; color: #4a3321;">Metode Pembayaran</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
+                            <thead>
+                                <tr style="background-color: #f5f2eb; border-bottom: 1px solid #e1dcd6;">
+                                    <th style="text-align: left; padding: 8px; color: #8e7c77;">Metode</th>
+                                    <th style="text-align: center; padding: 8px; color: #8e7c77;">Transaksi</th>
+                                    <th style="text-align: right; padding: 8px; color: #8e7c77;">Jumlah</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            """
+            for method, info in methods_summary.items():
+                html += f"""
+                                <tr style="border-bottom: 1px solid #f5f2eb;">
+                                    <td style="padding: 10px 8px; font-weight: 500;">{method}</td>
+                                    <td style="padding: 10px 8px; text-align: center;">{info['count']}</td>
+                                    <td style="padding: 10px 8px; text-align: right; font-weight: bold; color: #4a3e3d;">{format_idr_py(info['amount'])}</td>
+                                </tr>
+                """
+            html += """
+                            </tbody>
+                        </table>
+
+                        <!-- Menu Terlaris -->
+                        <h3 style="border-bottom: 2px solid #f0e9df; padding-bottom: 6px; margin-top: 0; color: #4a3321;">5 Menu Terlaris</h3>
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
+                            <thead>
+                                <tr style="background-color: #f5f2eb; border-bottom: 1px solid #e1dcd6;">
+                                    <th style="text-align: left; padding: 8px; color: #8e7c77;">Nama Menu</th>
+                                    <th style="text-align: right; padding: 8px; color: #8e7c77;">Volume Terjual</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            """
+            if not top_menus:
+                html += """
+                                <tr>
+                                    <td colspan="2" style="padding: 12px; text-align: center; color: #8e7c77; font-style: italic;">Tidak ada penjualan menu hari ini</td>
+                                </tr>
+                """
+            for menu in top_menus:
+                html += f"""
+                                <tr style="border-bottom: 1px solid #f5f2eb;">
+                                    <td style="padding: 10px 8px;">{menu['nama_produk']}</td>
+                                    <td style="padding: 10px 8px; text-align: right; font-weight: bold; color: #4a3321;">{menu['total_qty']} Porsi</td>
+                                </tr>
+                """
+            html += """
+                            </tbody>
+                        </table>
+
+                        <!-- Laporan Detil Transaksi -->
+                        <h3 style="border-bottom: 2px solid #f0e9df; padding-bottom: 6px; margin-top: 0; color: #4a3321;">Detil Transaksi</h3>
+                        <div style="max-height: 250px; overflow-y: auto; border: 1px solid #e1dcd6; border-radius: 6px; margin-bottom: 24px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <thead>
+                                    <tr style="background-color: #f5f2eb; border-bottom: 1px solid #e1dcd6; position: sticky; top: 0;">
+                                        <th style="text-align: left; padding: 8px; color: #8e7c77;">ID</th>
+                                        <th style="text-align: left; padding: 8px; color: #8e7c77;">Kasir</th>
+                                        <th style="text-align: center; padding: 8px; color: #8e7c77;">Metode</th>
+                                        <th style="text-align: right; padding: 8px; color: #8e7c77;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+            """
+            if not tx_details:
+                html += """
+                                    <tr>
+                                        <td colspan="4" style="padding: 12px; text-align: center; color: #8e7c77; font-style: italic;">Tidak ada transaksi hari ini</td>
+                                    </tr>
+                """
+            for tx in tx_details:
+                tx_id_str = f"TX-{str(tx['id_transaksi']).zfill(6)}"
+                html += f"""
+                                    <tr style="border-bottom: 1px solid #f5f2eb;">
+                                        <td style="padding: 8px;">{tx_id_str}</td>
+                                        <td style="padding: 8px;">{tx['nama_kasir'] or '-'}</td>
+                                        <td style="padding: 8px; text-align: center;">{tx['metode_pembayaran']}</td>
+                                        <td style="padding: 8px; text-align: right; font-weight: bold;">{format_idr_py(tx['total_harga'])}</td>
+                                    </tr>
+                """
+            html += f"""
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>
+
+                    <!-- Footer -->
+                    <div style="background-color: #fcf9f6; padding: 16px; text-align: center; border-top: 1px solid #e1dcd6; font-size: 12px; color: #8e7c77;">
+                        <p style="margin: 0;">Email ini dikirim otomatis oleh Sistem POS Kopi Sibei.</p>
+                        <p style="margin: 4px 0 0;">&copy; 2026 Sibei Coffee POS. Hak Cipta Dilindungi.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """
+            return html
+    except Exception as e:
+        print("Gagal membuat HTML laporan:", e)
+        return ""
+    finally:
+        if conn: conn.close()
+
+def send_email_via_resend(recipient, subject, html_content):
+    if not RESEND_API_KEY or RESEND_API_KEY.startswith("your-"):
+        print("Resend API Key belum diisi. Pengiriman email dilewati (Mode Simulasi).")
+        return False
+        
+    # Auto-fallback jika menggunakan domain onboarding gratis Resend
+    if "onboarding@resend.dev" in RESEND_SENDER:
+        # Resend membatasi penerima hanya ke email pendaftar API Key (kepineliano@gmail.com)
+        recipient = "kepineliano@gmail.com"
+        
+    url = "https://api.resend.com/emails"
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    payload = {
+        "from": RESEND_SENDER,
+        "to": [recipient],
+        "subject": subject,
+        "html": html_content
+    }
+    
+    try:
+        req = urllib.request.Request(
+            url, 
+            data=json.dumps(payload).encode('utf-8'), 
+            headers=headers, 
+            method='POST'
+        )
+        with urllib.request.urlopen(req) as response:
+            res_body = response.read().decode('utf-8')
+            print("Email laporan sukses terkirim via Resend API. Response:", res_body)
+            return True
+    except Exception as e:
+        print("Gagal mengirim email via Resend:", e)
+        if hasattr(e, 'read'):
+            try:
+                print("Error detail Resend API:", e.read().decode('utf-8'))
+            except Exception:
+                pass
+        return False
+
+def get_manager_email():
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("SELECT email FROM users WHERE role='manager' LIMIT 1")
+            res = cur.fetchone()
+            if res and res['email']:
+                return res['email']
+    except Exception as e:
+        print("Gagal fetch email manager:", e)
+    finally:
+        if conn: conn.close()
+    return "kepineliano@gmail.com" # default fallback
+
+last_sent_date = None
+
+def run_auto_report_scheduler():
+    global last_sent_date
+    print("=" * 60)
+    print(f"  BACKGROUND SCHEDULER: Aktif (waktu kirim harian: {AUTO_REPORT_TIME})")
+    print("=" * 60)
+    
+    while True:
+        try:
+            now = datetime.now()
+            current_time_str = now.strftime("%H:%M")
+            current_date_str = now.strftime("%Y-%m-%d")
+            
+            if current_time_str == AUTO_REPORT_TIME and last_sent_date != current_date_str:
+                # Jika berjalan jam 00:00 (tengah malam), target laporan adalah penjualan kemarin (1 hari sebelum hari ini)
+                if AUTO_REPORT_TIME == "00:00":
+                    report_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+                else:
+                    report_date = current_date_str
+
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Pemicu scheduler harian aktif untuk tanggal {report_date}...")
+                recipient = get_manager_email()
+                subject = f"☕ Laporan Penjualan Harian - {report_date}"
+                html_content = build_sales_report_html(report_date, report_date)
+                
+                if html_content:
+                    success = send_email_via_resend(recipient, subject, html_content)
+                    if success:
+                        last_sent_date = current_date_str
+                        print(f"Laporan otomatis tanggal {report_date} sukses dikirim ke {recipient}.")
+                    else:
+                        print(f"Laporan otomatis tanggal {report_date} gagal dikirim. Dicoba lagi nanti.")
+                else:
+                    print("Laporan kosong atau DB tidak terbaca. Menunda percobaan.")
+            time.sleep(30)
+        except Exception as e:
+            print("Error di thread background scheduler:", e)
+            time.sleep(30)
+
+@app.route('/api/report/email', methods=['POST'])
+@role_required('manager')
+def manual_email_report():
+    data = request.get_json() or {}
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    recipient = data.get('recipient_email')
+    
+    if not start_date or not end_date:
+        today = date.today().isoformat()
+        start_date = start_date or today
+        end_date = end_date or today
+        
+    if not recipient:
+        recipient = get_manager_email()
+        
+    html_content = build_sales_report_html(start_date, end_date)
+    if not html_content:
+        return jsonify({"status": "error", "message": "Gagal menyusun laporan penjualan."}), 500
+        
+    subject = f"☕ Laporan Penjualan Cafe ({start_date} s/d {end_date})"
+    success = send_email_via_resend(recipient, subject, html_content)
+    
+    if success:
+        return jsonify({
+            "status": "success", 
+            "message": f"Laporan penjualan ({start_date} s/d {end_date}) berhasil dikirim ke email {recipient}!"
+        }), 200
+    else:
+        if not RESEND_API_KEY or RESEND_API_KEY.startswith("your-"):
+            print("=== SIMULASI LAPORAN EMAIL ===")
+            print(html_content)
+            print("==============================")
+            return jsonify({
+                "status": "warning",
+                "message": f"Laporan berhasil dibuat! [MODE SIMULASI] Kredensial Resend API belum diisi di app.py. Isi email dicetak di terminal Flask."
+            }), 200
+        else:
+            return jsonify({
+                "status": "error", 
+                "message": "Gagal mengirimkan email via Resend API. Periksa koneksi internet atau status API Key Anda."
+            }), 500
+
 # ============================================================
 #  PAGE ROUTING (rendering templates)
 # ============================================================
@@ -626,6 +976,11 @@ def route_manager():
 
 # ============================================================
 if __name__ == '__main__':
+    import os
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+        scheduler_thread = threading.Thread(target=run_auto_report_scheduler, daemon=True)
+        scheduler_thread.start()
+
     print("=" * 55)
     print("  KOPI SIBEI BACKEND — sesuai struktur DB nyata")
     print("  Status: http://127.0.0.1:5000/api/status")

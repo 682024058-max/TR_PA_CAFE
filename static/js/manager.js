@@ -823,6 +823,7 @@ function initReportsController() {
     });
     document.getElementById("btn-export-pdf")?.addEventListener("click", exportReportPdf);
     document.getElementById("btn-export-excel")?.addEventListener("click", exportReportExcel);
+    document.getElementById("btn-email-report")?.addEventListener("click", sendEmailReport);
 }
 
 function updateReportMetrics() {
@@ -1520,6 +1521,40 @@ function exportReportPdf() {
     });
 
     printReportHTML("LAPORAN DETIL TRANSAKSI PENJUALAN", headers, rows);
+}
+
+async function sendEmailReport() {
+    const btn = document.getElementById("btn-email-report");
+    if (!btn) return;
+    
+    const dateStart = document.getElementById("report-date-start")?.value || "";
+    const dateEnd   = document.getElementById("report-date-end")?.value   || "";
+    
+    const originalText = btn.innerHTML;
+    btn.setAttribute("disabled", "true");
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+    
+    try {
+        const result = await apiFetch(`${API_BASE}/report/email`, {
+            method: "POST",
+            body: JSON.stringify({
+                start_date: dateStart,
+                end_date: dateEnd
+            })
+        });
+        
+        if (result.status === "warning") {
+            showToast(result.message, "warning");
+        } else {
+            showToast(result.message || "Laporan penjualan berhasil dikirim ke email!", "success");
+        }
+    } catch (e) {
+        console.error(e);
+        showToast(e.message || "Gagal mengirimkan laporan ke email.", "danger");
+    } finally {
+        btn.removeAttribute("disabled");
+        btn.innerHTML = originalText;
+    }
 }
 
 window.selectTemplateImage  = function() {};
