@@ -96,7 +96,13 @@ async function loadKategoriDanProduk() {
     try {
         const res  = await fetch(`${API_BASE}/kategori`);
         const data = await res.json();
-        if (data.status === 'success') renderCategoryTabs(data.data);
+        if (data.status === 'success') {
+            // Update KATEGORI_LABEL secara dinamis agar menampilkan nama kategori yang cantik
+            (data.data || []).forEach(k => {
+                KATEGORI_LABEL[k.id_kategori] = k.nama_kategori;
+            });
+            renderCategoryTabs(data.data);
+        }
     } catch (e) {
         console.error('Gagal load kategori:', e);
     }

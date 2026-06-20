@@ -210,17 +210,58 @@ def delete_user(id_user):
         if conn: conn.close()
 
 # ============================================================
-#  KATEGORI  — hardcoded sesuai ENUM kolom products.kategori
+#  KATEGORI  — Dinamis dari tabel kategori di database
 # ============================================================
 @app.route('/api/kategori', methods=['GET'])
 def get_kategori():
-    data = [
-        {"id_kategori": "coffee",     "nama_kategori": "Coffee"},
-        {"id_kategori": "non-coffee", "nama_kategori": "Non Coffee"},
-        {"id_kategori": "snack",      "nama_kategori": "Snack"},
-        {"id_kategori": "dessert",    "nama_kategori": "Dessert"},
-    ]
-    return jsonify({"status":"success","data":data}), 200
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("SELECT id_kategori, nama_kategori, icon FROM kategori ORDER BY id_kategori")
+            rows = cur.fetchall()
+        data = []
+        import re
+        for r in rows:
+            text = r['nama_kategori'].lower().strip()
+            text = re.sub(r'[^a-z0-9\s-]', '', text)
+            slug = re.sub(r'[\s-]+', '-', text)
+            data.append({
+                "id_kategori": slug,
+                "nama_kategori": r['nama_kategori'],
+                "icon": r['icon']
+            })
+        return jsonify({"status":"success","data":data}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/kategori', methods=['POST'])
+@role_required('manager')
+def add_category():
+    data = request.get_json() or {}
+    nama_kategori = data.get('nama_kategori', '').strip()
+    icon = data.get('icon', 'fa-tag').strip()
+    if not nama_kategori:
+        return jsonify({"status":"error","message":"Nama kategori wajib diisi!"}), 400
+    
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            # Cek duplikat
+            cur.execute("SELECT id_kategori FROM kategori WHERE LOWER(nama_kategori)=LOWER(%s)", (nama_kategori,))
+            if cur.fetchone():
+                return jsonify({"status":"error","message":"Kategori dengan nama tersebut sudah ada."}), 409
+            
+            cur.execute("INSERT INTO kategori (nama_kategori, icon) VALUES (%s, %s)", (nama_kategori, icon))
+        return jsonify({"status":"success","message":"Kategori baru berhasil ditambahkan."}), 201
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
 
 # ============================================================
 #  PRODUCTS

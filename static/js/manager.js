@@ -531,15 +531,57 @@ async function handleMenuSubmit(e) {
 window.handleMenuSubmit = handleMenuSubmit;
 
 // ============================================================
-// KELOLA KATEGORI (Read-only — ENUM di database)
+// KELOLA KATEGORI (CRUD via API)
 // ============================================================
 function initCategoryCRUD() {
-    // Kategori adalah ENUM di DB, tidak bisa ditambah/hapus via API
-    // Sembunyikan tombol tambah
+    // Tampilkan tombol tambah
     const addBtn = document.getElementById("btn-add-category-modal");
-    if (addBtn) addBtn.style.display = "none";
+    if (addBtn) addBtn.style.display = "";
+    
+    addBtn?.addEventListener("click", () => {
+        document.getElementById("category-form")?.reset();
+        document.getElementById("category-form-id").value = "";
+        document.getElementById("category-modal-title").textContent = "Tambah Kategori Baru";
+        openModal("category-modal");
+    });
+    
     document.getElementById("category-search")?.addEventListener("input", renderCategoriesTable);
+    document.getElementById("category-form")?.addEventListener("submit", handleCategorySubmit);
 }
+
+async function handleCategorySubmit(e) {
+    if (e) e.preventDefault();
+    const nameInput = document.getElementById("category-form-name");
+    const iconInput = document.getElementById("category-form-icon");
+    const name = nameInput ? nameInput.value.trim() : "";
+    const icon = iconInput ? iconInput.value.trim() : "fa-tag";
+    
+    if (!name) {
+        showToast("Nama kategori wajib diisi!", "warning");
+        return;
+    }
+    
+    try {
+        const payload = {
+            nama_kategori: name,
+            icon: icon
+        };
+        await apiFetch(`${API_BASE}/kategori`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+        });
+        showToast("Kategori baru berhasil ditambahkan!", "success");
+        closeModal("category-modal");
+        
+        await loadCategories();
+        renderCategoriesTable();
+        populateMenuCategoryFilter();
+    } catch(e) {
+        showToast("Gagal menyimpan kategori: " + e.message, "danger");
+    }
+}
+window.handleCategorySubmit = handleCategorySubmit;
+
 
 function renderCategoriesTable() {
     const tbody = document.getElementById("categories-table-tbody");
