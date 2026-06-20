@@ -1,0 +1,92 @@
+<!-- templates/manager/dashboard.html -->
+<!-- ================= 1. HALAMAN DASHBOARD MANAGER ================= -->
+<section id="view-dashboard" class="app-view active">
+
+    <!-- Card Statistik -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-green-soft"><i class="fa-solid fa-rupiah-sign text-green"></i></div>
+            <div class="stat-info">
+                <h3>Total Pendapatan</h3>
+                <p id="stat-revenue">Rp 0</p>
+                <span class="stat-meta text-success"><i class="fa-solid fa-arrow-up"></i> Bulan Ini</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-cream-soft"><i class="fa-solid fa-receipt text-brown"></i></div>
+            <div class="stat-info">
+                <h3>Total Transaksi</h3>
+                <p id="stat-total-tx">0</p>
+                <span class="stat-meta text-success"><i class="fa-solid fa-check-double"></i> Transaksi Selesai</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-soft"><i class="fa-solid fa-users-gear text-blue"></i></div>
+            <div class="stat-info">
+                <h3>Staf Kasir</h3>
+                <p id="stat-total-cashiers">0</p>
+                <span class="stat-meta">Akun Kasir Aktif</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-yellow-soft"><i class="fa-solid fa-star text-gold"></i></div>
+            <div class="stat-info">
+                <h3>Menu Terlaris</h3>
+                <p id="stat-top-menu">-</p>
+                <span class="stat-meta">Volume Terjual Tertinggi</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Graphs and Tables -->
+    <div class="dashboard-details-grid">
+        <!-- Chart Card: Penjualan Bulanan -->
+        <div class="dashboard-card chart-container-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-chart-line"></i> Tren Pendapatan Kafe</h3>
+            </div>
+            <div class="card-body chart-wrapper">
+                <canvas id="revenueMonthlyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chart Card: Transaksi Mingguan -->
+        <div class="dashboard-card chart-container-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-chart-bar"></i> Transaksi Mingguan</h3>
+            </div>
+            <div class="card-body chart-wrapper">
+                <canvas id="weeklyTxChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Transactions Table (Dashboard) -->
+    <div class="dashboard-card table-container-card mt-24">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-clock-rotate-left"></i> Transaksi POS Terbaru</h3>
+            <a href="javascript:void(0)" class="view-all-link" id="view-all-tx-btn">Lihat Semua Laporan</a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>ID Transaksi</th>
+                            <th>Waktu</th>
+                            <th>Kasir</th>
+                            <th>Subtotal</th>
+                            <th>Pajak & Servis</th>
+                            <th>Total Akhir</th>
+                            <th>Metode</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-transactions-tbody">
+                        <!-- Dynamically injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,79 @@
+<!-- templates/kasir/dashboard.html -->
+<!-- ================= 1. HALAMAN DASHBOARD ================= -->
+<section id="view-dashboard" class="app-view active">
+
+    <!-- Card Statistik -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-cream-soft"><i class="fa-solid fa-receipt text-brown"></i></div>
+            <div class="stat-info">
+                <h3>Total Transaksi</h3>
+                <p id="stat-total-tx">0</p>
+                <span class="stat-meta text-success"><i class="fa-solid fa-arrow-up"></i> Hari ini</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-green-soft"><i class="fa-solid fa-rupiah-sign text-green"></i></div>
+            <div class="stat-info">
+                <h3>Total Pendapatan</h3>
+                <p id="stat-revenue">Rp0</p>
+                <span class="stat-meta text-success"><i class="fa-solid fa-arrow-up"></i> Hari ini</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-soft"><i class="fa-solid fa-mug-hot text-blue"></i></div>
+            <div class="stat-info">
+                <h3>Jumlah Pesanan</h3>
+                <p id="stat-items-sold">0</p>
+                <span class="stat-meta">Item Terjual</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-yellow-soft"><i class="fa-solid fa-star text-gold"></i></div>
+            <div class="stat-info">
+                <h3>Menu Terlaris</h3>
+                <p id="stat-top-menu">-</p>
+                <span class="stat-meta">Paling Banyak Dipesan</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Graphs and Tables -->
+    <div class="dashboard-details-grid">
+        <!-- Chart Card -->
+        <div class="dashboard-card chart-container-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-chart-line"></i> Grafik Pendapatan & Transaksi Harian</h3>
+            </div>
+            <div class="card-body chart-wrapper">
+                <canvas id="salesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="dashboard-card table-container-card">
+            <div class="card-header">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Transaksi Terbaru</h3>
+                <a href="javascript:void(0)" class="view-all-link" id="view-all-tx-btn">Lihat Semua</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>ID Transaksi</th>
+                                <th>Waktu</th>
+                                <th>Total</th>
+                                <th>Metode</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-transactions-tbody">
+                            <!-- Dynamically injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

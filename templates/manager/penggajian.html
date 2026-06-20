@@ -1,0 +1,90 @@
+<!-- templates/manager/penggajian.html -->
+<!-- ================= 6. HALAMAN PENGGAJIAN ================= -->
+<section id="view-penggajian" class="app-view">
+    <!-- Metrics Summary Penggajian -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-green-soft"><i class="fa-solid fa-money-bill-wave text-green"></i></div>
+            <div class="stat-info">
+                <h3>Total Penggajian</h3>
+                <p id="payroll-stat-total">Rp 0</p>
+                <span class="stat-meta">Total Dibayarkan</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-cream-soft"><i class="fa-solid fa-users text-brown"></i></div>
+            <div class="stat-info">
+                <h3>Kasir Terdaftar</h3>
+                <p id="payroll-stat-count">0</p>
+                <span class="stat-meta">Penerima Gaji</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-soft"><i class="fa-solid fa-circle-check text-blue"></i></div>
+            <div class="stat-info">
+                <h3>Sudah Dibayar</h3>
+                <p id="payroll-stat-paid">0</p>
+                <span class="stat-meta">Status Lunas</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-yellow-soft"><i class="fa-solid fa-clock text-gold"></i></div>
+            <div class="stat-info">
+                <h3>Belum Dibayar</h3>
+                <p id="payroll-stat-unpaid">0</p>
+                <span class="stat-meta">Status Pending</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-card mt-24">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-money-bill-wave"></i> Manajemen Penggajian Kasir</h3>
+            <div class="export-buttons-group">
+                <button class="btn-secondary" id="btn-export-payroll-excel">
+                    <i class="fa-solid fa-file-excel text-green"></i> Export Excel
+                </button>
+                <button class="btn-primary" id="btn-add-payroll-modal">
+                    <i class="fa-solid fa-plus"></i> Tambah Data Gaji
+                </button>
+            </div>
+        </div>
+
+        <!-- Payroll Filters -->
+        <div class="riwayat-filter-header">
+            <div class="filter-group search-group">
+                <label for="payroll-search">Cari Nama Kasir</label>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="payroll-search" placeholder="Cari nama kasir...">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label for="payroll-filter-month">Periode Bulan</label>
+                <input type="month" id="payroll-filter-month">
+            </div>
+            <button class="btn-secondary btn-reset-filters" id="btn-reset-payroll-filters" style="margin-bottom: 2px;">
+                <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+        </div>
+
+        <!-- Payroll Table -->
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Nama Kasir</th>
+                            <th>Periode</th>
+                            <th>Bayaran/Shift</th>
+                            <th style="text-align:center;">Total Shift</th>
+                            <th>Total Gaji</th>
+                            <th style="text-align: center; width: 130px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payroll-table-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

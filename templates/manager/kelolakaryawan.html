@@ -1,0 +1,44 @@
+<!-- templates/manager/kelolakaryawan.html -->
+<!-- ================= 4. HALAMAN KELOLA KASIR ================= -->
+<section id="view-kelola-kasir" class="app-view">
+    <div class="dashboard-card">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-users-gear"></i> Kelola Hak Akses Kasir POS</h3>
+            <button class="btn-primary" id="btn-add-cashier-modal">
+                <i class="fa-solid fa-user-plus"></i> Buat Akun Kasir
+            </button>
+        </div>
+        
+        <!-- Search Kasir -->
+        <div class="riwayat-filter-header">
+            <div class="filter-group search-group">
+                <label for="cashier-search">Cari Nama / Username Kasir</label>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="cashier-search" placeholder="Cari kasir...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Cashier Table -->
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Nama Lengkap</th>
+                            <th>Username</th>
+                            <th>Email</th>
+                            <th>Status Akun</th>
+                            <th>Ubah Status</th>
+                            <th style="text-align: center; width: 200px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cashier-table-tbody">
+                        <!-- Dynamically injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,84 @@
+<!-- templates/kasir/absensi.html -->
+<!-- ================= 4. HALAMAN ABSENSI ================= -->
+<section id="view-absensi" class="app-view">
+    <div class="attendance-layout">
+        <!-- Left Panel: Clock and Actions -->
+        <div class="attendance-action-panel">
+            <!-- Live clock dashboard -->
+            <div class="attendance-clock-card">
+                <div class="clock-big" id="attendance-big-clock">12:00:00</div>
+                <div class="clock-date" id="attendance-big-date">Selasa, 26 Mei 2026</div>
+                <div class="active-shift-badge">
+                    <i class="fa-solid fa-business-time"></i> Shift: Pagi (08:00 - 16:00)
+                </div>
+            </div>
+
+            <!-- Buttons Masuk / Pulang -->
+            <div class="attendance-buttons">
+                <button class="btn-attendance check-in" id="btn-clock-in">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <div class="btn-attendance-text">
+                        <h4>Absen Masuk</h4>
+                        <p>Mulai jam kerja kasir Anda</p>
+                    </div>
+                </button>
+                <button class="btn-attendance check-out disabled" id="btn-clock-out" disabled>
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <div class="btn-attendance-text">
+                        <h4>Absen Pulang</h4>
+                        <p>Selesaikan jam kerja Anda</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Panel: Todays Status & Log -->
+        <div class="attendance-status-panel">
+            <!-- Todays Summary Card -->
+            <div class="dashboard-card status-card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-user-check"></i> Status Kehadiran Hari Ini</h3>
+                </div>
+                <div class="card-body grid-2-columns">
+                    <div class="status-block">
+                        <label>Jam Masuk</label>
+                        <p id="att-summary-in" class="empty-state-text">-- : --</p>
+                    </div>
+                    <div class="status-block">
+                        <label>Jam Pulang</label>
+                        <p id="att-summary-out" class="empty-state-text">-- : --</p>
+                    </div>
+                    <div class="status-block span-2">
+                        <label>Status Kehadiran</label>
+                        <p id="att-summary-status"><span class="badge badge-warning">Belum Hadir</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Card -->
+            <div class="dashboard-card attendance-log-card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Absensi Bulan Ini</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Absen Masuk</th>
+                                    <th>Absen Pulang</th>
+                                    <th>Total Jam</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendance-log-tbody">
+                                <!-- Dynimcally injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,54 @@
+<!-- templates/kasir/riwayattransaksi.html -->
+<!-- ================= 3. HALAMAN RIWAYAT TRANSAKSI ================= -->
+<section id="view-riwayat" class="app-view">
+    <div class="dashboard-card riwayat-card">
+        <!-- Filters Header -->
+        <div class="riwayat-filter-header">
+            <div class="filter-group search-group">
+                <label for="tx-search">Cari Transaksi</label>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="tx-search" placeholder="Cari ID transaksi, nama kasir...">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label for="tx-filter-date">Filter Tanggal</label>
+                <input type="date" id="tx-filter-date">
+            </div>
+            <div class="filter-group">
+                <label for="tx-filter-payment">Metode Pembayaran</label>
+                <select id="tx-filter-payment">
+                    <option value="all">Semua Metode</option>
+                    <option value="Cash">Cash</option>
+                    <option value="QRIS">QRIS</option>
+                    <option value="Debit">Debit</option>
+                </select>
+            </div>
+            <button class="btn-secondary btn-reset-filters" id="btn-reset-tx-filters">
+                <i class="fa-solid fa-rotate-left"></i> Reset Filter
+            </button>
+        </div>
+
+        <!-- History Table -->
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="modern-table scrollable-table">
+                    <thead>
+                        <tr>
+                            <th>ID Transaksi</th>
+                            <th>Tanggal & Waktu</th>
+                            <th>Nama Kasir</th>
+                            <th>Total Pembayaran</th>
+                            <th>Metode</th>
+                            <th>Status</th>
+                            <th style="text-align: center;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-transactions-tbody">
+                        <!-- Dynamically injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,71 @@
+<!-- templates/kasir/transaksi.html -->
+<!-- ================= 2. HALAMAN TRANSAKSI (POS CAFE) ================= -->
+<section id="view-transaksi" class="app-view">
+    <div class="pos-layout">
+        <!-- Left Panel: Menu Items Grid & Filters -->
+        <div class="pos-menu-panel">
+            <!-- Filters & Search Bar -->
+            <div class="pos-filter-bar">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="menu-search-input" placeholder="Cari nama menu makanan atau minuman...">
+                </div>
+                <div class="category-tabs">
+                    <button class="category-btn active" data-category="all">Semua</button>
+                    <button class="category-btn" data-category="coffee">☕ Coffee</button>
+                    <button class="category-btn" data-category="non-coffee">🥤 Non Coffee</button>
+                    <button class="category-btn" data-category="snack">🍿 Snack</button>
+                    <button class="category-btn" data-category="dessert">🍰 Dessert</button>
+                </div>
+            </div>
+
+            <!-- Menu Grid -->
+            <div class="menu-grid-wrapper">
+                <div class="menu-grid" id="menu-grid-container">
+                    <!-- Dynamic Menu Cards loaded from JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Cart & Checkout Sidebar -->
+        <div class="pos-cart-panel">
+            <div class="cart-header">
+                <h3><i class="fa-solid fa-shopping-basket"></i> Keranjang Pesanan</h3>
+                <button class="btn-clear-cart" id="btn-reset-cart" title="Reset Keranjang">
+                    <i class="fa-solid fa-trash-can"></i> Reset
+                </button>
+            </div>
+
+            <!-- Cart Scrollable Area -->
+            <div class="cart-items-wrapper">
+                <div class="cart-items-container" id="cart-items-container">
+                    <!-- Dynamic Cart Items loaded from JS -->
+                </div>
+            </div>
+
+            <!-- Calculations & Checkout -->
+            <div class="cart-summary-section">
+                <div class="summary-row">
+                    <span>Subtotal</span>
+                    <span id="cart-subtotal">Rp0</span>
+                </div>
+                <div class="summary-row">
+                    <span>Pajak (PPN 10%)</span>
+                    <span id="cart-tax">Rp0</span>
+                </div>
+                <div class="summary-row">
+                    <span>Service Charge (5%)</span>
+                    <span id="cart-service">Rp0</span>
+                </div>
+                <div class="summary-row grand-total-row">
+                    <span>Total Akhir</span>
+                    <span id="cart-grand-total">Rp0</span>
+                </div>
+
+                <button class="btn-checkout disabled" id="btn-pay-checkout" disabled>
+                    <i class="fa-solid fa-wallet"></i> Pilih Pembayaran
+                </button>
+            </div>
+        </div>
+    </div>
+</section>

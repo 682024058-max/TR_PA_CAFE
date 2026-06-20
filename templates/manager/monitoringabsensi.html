@@ -1,0 +1,84 @@
+<!-- templates/manager/monitoringabsensi.html -->
+<!-- ================= 5. HALAMAN MONITORING ABSENSI ================= -->
+<section id="view-monitoring-absensi" class="app-view">
+    <!-- Metrics Summary Absensi -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-green-soft"><i class="fa-solid fa-user-check text-green"></i></div>
+            <div class="stat-info">
+                <h3>Kasir Hadir Hari Ini</h3>
+                <p id="abs-stat-hadir">0</p>
+                <span class="stat-meta">Sudah Absen Masuk</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-yellow-soft"><i class="fa-solid fa-clock text-gold"></i></div>
+            <div class="stat-info">
+                <h3>Terlambat Hadir</h3>
+                <p id="abs-stat-terlambat">0</p>
+                <span class="stat-meta">Lewat Pukul 08:00 AM</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-soft"><i class="fa-solid fa-business-time text-blue"></i></div>
+            <div class="stat-info">
+                <h3>Kasir Aktif Saat Ini</h3>
+                <p id="abs-stat-aktif">0</p>
+                <span class="stat-meta">Sedang Bertugas</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-card mt-24">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-user-clock"></i> Riwayat Kehadiran Kasir</h3>
+            <div class="export-buttons-group">
+                <button class="btn-secondary" id="btn-export-absensi-excel">
+                    <i class="fa-solid fa-file-excel text-green"></i> Export Excel
+                </button>
+                <button class="btn-primary" id="btn-export-absensi-pdf">
+                    <i class="fa-solid fa-file-pdf"></i> Export PDF
+                </button>
+            </div>
+        </div>
+        
+        <!-- Attendance Filters -->
+        <div class="riwayat-filter-header">
+            <div class="filter-group search-group">
+                <label for="absensi-search">Cari Nama Kasir</label>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="absensi-search" placeholder="Ketik nama kasir...">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label for="absensi-filter-date">Tanggal Kehadiran</label>
+                <input type="date" id="absensi-filter-date">
+            </div>
+            <button class="btn-secondary btn-reset-filters" id="btn-reset-absensi-filters" style="margin-bottom: 2px;">
+                <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+        </div>
+
+        <!-- Attendance Table -->
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>Nama Kasir</th>
+                            <th>Tanggal</th>
+                            <th>Jam Masuk</th>
+                            <th>Jam Pulang</th>
+                            <th>Status</th>
+                            <th style="text-align: center; width: 120px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="absensi-table-tbody">
+                        <!-- Dynamically injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

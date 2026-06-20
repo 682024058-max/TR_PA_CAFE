@@ -1,0 +1,96 @@
+<!-- templates/manager/kelolamenu.html -->
+<!-- ================= 2. HALAMAN KELOLA MENU & KATEGORI (TABBED) ================= -->
+<section id="view-kelola-menu" class="app-view">
+    <div class="dashboard-card">
+
+        <!-- Inner Tab Navigation -->
+        <div class="inner-tab-bar">
+            <button class="inner-tab-btn active" id="tab-btn-daftar-menu" onclick="switchInnerTab('daftar-menu')">
+                <i class="fa-solid fa-utensils"></i> Daftar Menu
+            </button>
+            <button class="inner-tab-btn" id="tab-btn-kelola-kategori" onclick="switchInnerTab('kelola-kategori')">
+                <i class="fa-solid fa-tags"></i> Kelola Kategori
+            </button>
+        </div>
+
+        <!-- ===== TAB 1: DAFTAR MENU ===== -->
+        <div id="inner-tab-daftar-menu" class="inner-tab-pane active">
+            <!-- Toolbar -->
+            <div class="riwayat-filter-header">
+                <div class="filter-group search-group">
+                    <label for="menu-search">Cari Nama Menu</label>
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="menu-search" placeholder="Cari nama makanan, minuman...">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label for="menu-filter-category">Kategori</label>
+                    <select id="menu-filter-category">
+                        <option value="all">Semua Kategori</option>
+                    </select>
+                </div>
+                <button class="btn-primary" id="btn-add-menu-modal" style="margin-bottom: 2px;">
+                    <i class="fa-solid fa-plus"></i> Tambah Menu
+                </button>
+            </div>
+
+            <!-- Menu Table -->
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 70px;">Foto</th>
+                                <th>Nama Menu</th>
+                                <th>Kategori</th>
+                                <th>Harga</th>
+                                <th style="text-align: center; width: 140px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="menu-table-tbody">
+                            <!-- Dynamically injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TAB 2: KELOLA KATEGORI ===== -->
+        <div id="inner-tab-kelola-kategori" class="inner-tab-pane">
+            <!-- Toolbar -->
+            <div class="riwayat-filter-header">
+                <div class="filter-group search-group">
+                    <label for="category-search">Cari Kategori</label>
+                    <div class="search-box">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="category-search" placeholder="Cari nama kategori...">
+                    </div>
+                </div>
+                <button class="btn-primary" id="btn-add-category-modal" style="margin-bottom: 2px;">
+                    <i class="fa-solid fa-plus"></i> Tambah Kategori
+                </button>
+            </div>
+
+            <!-- Categories Table -->
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>ID Kategori</th>
+                                <th>Nama Kategori</th>
+                                <th>Ikon</th>
+                                <th style="text-align: center; width: 200px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="categories-table-tbody">
+                            <!-- Dynamically injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>

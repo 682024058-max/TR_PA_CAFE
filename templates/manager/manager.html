@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kopi Sibei - Cafe Manager Dashboard</title>
+    
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js for beautiful graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS File -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/manager.css') }}">
+</head>
+<body>
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Main App Container -->
+    <div class="app-container">
+        
+        <!-- ================= SIDEBAR MENU ================= -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-wrapper">
+                    <span class="logo-icon"><i class="fa-solid fa-mug-hot"></i></span>
+                    <div class="logo-text">
+                        <h3>Kopi Sibei</h3>
+                        <p>Cafe Management</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active" data-target="dashboard">
+                        <a href="javascript:void(0)"><span>Dashboard</span></a>
+                    </li>
+                    <li class="nav-item" data-target="kelola-menu">
+                        <a href="javascript:void(0)"><span>Kelola Menu</span></a>
+                    </li>
+                    <li class="nav-item" data-target="kelola-kasir">
+                        <a href="javascript:void(0)"><span>Kelola Kasir</span></a>
+                    </li>
+                    <li class="nav-item" data-target="monitoring-absensi">
+                        <a href="javascript:void(0)"><span>Monitoring Absensi</span></a>
+                    </li>
+                    <li class="nav-item" data-target="penggajian">
+                        <a href="javascript:void(0)"><span>Penggajian</span></a>
+                    </li>
+                    <li class="nav-item" data-target="laporan-penjualan">
+                        <a href="javascript:void(0)"><span>Laporan Penjualan</span></a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <!-- Sidebar Footer: Active Manager Profile -->
+            <div class="sidebar-footer">
+                <div class="cashier-info">
+                    <div class="cashier-details">
+                        <h4 id="active-manager-name">Yohana Manager</h4>
+                        <span class="role-badge"><i class="fa-solid fa-shield-halved text-success"></i> Store Manager</span>
+                    </div>
+                </div>
+                <button class="btn-logout" id="btn-logout-sidebar" title="Log Out">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span>Keluar</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ================= MAIN CONTENT WRAPPER ================= -->
+        <div class="main-wrapper">
+            
+            <!-- Navbar Atas -->
+            <header class="navbar">
+                <div class="navbar-left">
+                    <button class="sidebar-toggle" id="sidebar-toggle-btn">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <h2 class="view-title" id="page-title">Dashboard</h2>
+                </div>
+                
+                <div class="navbar-right">
+                    <!-- Real-time Clock -->
+                    <div class="realtime-clock">
+                        <i class="fa-regular fa-clock"></i>
+                        <span id="live-time">Rabu, 27 Mei 2026 | 12:00:00</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main App Content -->
+            <main class="content-body">
+                
+                {% include 'manager/dashboard.html' %}
+                {% include 'manager/kelolamenu.html' %}
+                {% include 'manager/kelolakaryawan.html' %}
+                {% include 'manager/monitoringabsensi.html' %}
+                {% include 'manager/penggajian.html' %}
+                {% include 'manager/laporanpenjualan.html' %}
+            </main>
+        </div>
+    </div>
+
+    <!-- ======================================================= -->
+    <!-- ==================== MODALS AREA ===================== -->
+    <!-- ======================================================= -->
+
+    <!-- ================= 1. MODAL KELOLA MENU (ADD & EDIT) ================= -->
+    <div id="menu-modal" class="modal-overlay">
+        <div class="modal-content menu-modal-slim">
+            <div class="modal-header">
+                <h2 id="menu-modal-title">Tambah Menu Baru</h2>
+                <button class="btn-close-modal" onclick="closeModal('menu-modal')">&times;</button>
+            </div>
+
+            <form id="menu-form" onsubmit="handleMenuSubmit(event)">
+                <input type="hidden" id="menu-form-id">
+                <input type="hidden" id="menu-form-image">
+
+                <div class="menu-form-body">
+
+                    <!-- Foto Upload Area -->
+                    <div class="form-group">
+                        <label>Foto Menu</label>
+                        <div class="menu-photo-upload" id="menu-photo-upload-area" onclick="document.getElementById('menu-file-input').click()">
+                            <img id="menu-image-preview-element" src="" alt="Preview" class="menu-photo-preview hidden">
+                            <div id="menu-photo-placeholder">
+                                <i class="fa-regular fa-image"></i>
+                                <span>Klik untuk unggah foto</span>
+                            </div>
+                        </div>
+                        <input type="file" id="menu-file-input" accept="image/*" style="display:none" onchange="handleMenuFileUpload(this)">
+                    </div>
+
+                    <!-- Nama Menu -->
+                    <div class="form-group">
+                        <label for="menu-form-name">Nama Menu <span class="required">*</span></label>
+                        <input type="text" id="menu-form-name" required placeholder="Contoh: Caramel Macchiato">
+                    </div>
+
+                    <!-- Deskripsi -->
+                    <div class="form-group">
+                        <label for="menu-form-desc">Deskripsi</label>
+                        <textarea id="menu-form-desc" rows="3" placeholder="Contoh: Signature espresso with vanilla and caramel"></textarea>
+                    </div>
+
+                    <!-- Kategori -->
+                    <div class="form-group">
+                        <label for="menu-form-category">Kategori <span class="required">*</span></label>
+                        <select id="menu-form-category" required>
+                            <!-- Dynamically populated -->
+                        </select>
+                    </div>
+
+                    <!-- Harga -->
+                    <div class="form-group">
+                        <label for="menu-form-price">Harga <span class="required">*</span></label>
+                        <div class="harga-input-wrapper">
+                            <span class="harga-prefix">Rp</span>
+                            <input type="number" id="menu-form-price" required min="0" placeholder="0">
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer menu-modal-footer">
+                    <button type="button" class="btn-menu-cancel" onclick="closeModal('menu-modal')">Batal</button>
+                    <button type="submit" class="btn-menu-save" id="btn-save-menu">Simpan Menu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= 2. MODAL KELOLA KATEGORI ================= -->
+
+    <div id="category-modal" class="modal-overlay">
+        <div class="modal-content sub-modal-content">
+            <div class="modal-header">
+                <h2 id="category-modal-title">Tambah Kategori Baru</h2>
+                <button class="btn-close-modal" onclick="closeModal('category-modal')">&times;</button>
+            </div>
+            
+            <form id="category-form" onsubmit="handleCategorySubmit(event)">
+                <input type="hidden" id="category-form-id">
+                
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="category-form-name">Nama Kategori <span class="required">*</span></label>
+                        <input type="text" id="category-form-name" required placeholder="Contoh: Coffee, Non Coffee, Snack, Dessert">
+                    </div>
+                    <div class="form-group mt-12">
+                        <label for="category-form-icon">Nama Kode FontAwesome Icon <span class="required">*</span></label>
+                        <input type="text" id="category-form-icon" required placeholder="Contoh: fa-mug-hot, fa-cookie, fa-ice-cream">
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeModal('category-modal')">Batal</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-save"></i> Simpan Kategori
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= 3. MODAL KELOLA KASIR ================= -->
+    <div id="cashier-modal" class="modal-overlay">
+        <div class="modal-content sub-modal-content">
+            <div class="modal-header">
+                <h2 id="cashier-modal-title">Buat Akun Kasir Baru</h2>
+                <button class="btn-close-modal" onclick="closeModal('cashier-modal')">&times;</button>
+            </div>
+            
+            <form id="cashier-form" onsubmit="handleCashierSubmit(event)">
+                <input type="hidden" id="cashier-form-id">
+                
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="cashier-form-name">Nama Lengkap Kasir <span class="required">*</span></label>
+                        <input type="text" id="cashier-form-name" required placeholder="Contoh: Aria Pratama">
+                    </div>
+                    
+                    <div class="form-row-2 mt-12">
+                        <div class="form-group">
+                            <label for="cashier-form-username">Username POS <span class="required">*</span></label>
+                            <input type="text" id="cashier-form-username" required placeholder="Contoh: kasir1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="cashier-form-email">Alamat Email Kasir <span class="required">*</span></label>
+                            <input type="email" id="cashier-form-email" required placeholder="Contoh: aria@gmail.com">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mt-12">
+                        <label for="cashier-form-status">Status Akun Kasir <span class="required">*</span></label>
+                        <select id="cashier-form-status" required>
+                            <option value="aktif">Aktif / Berhak Transaksi</option>
+                            <option value="nonaktif">Nonaktif / Blokir Akses</option>
+                        </select>
+                    </div>
+
+                    <!-- Password: wajib saat buat akun baru, opsional saat edit -->
+                    <div class="form-group mt-12" id="cashier-password-wrapper">
+                        <label for="cashier-form-password">Password <span class="required">*</span></label>
+                        <input type="password" id="cashier-form-password" placeholder="Isi password untuk akun baru" autocomplete="new-password">
+                        <small style="color:var(--text-muted);font-size:11px;margin-top:4px;display:block">Kosongkan saat edit jika tidak ingin mengubah password.</small>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeModal('cashier-modal')">Batal</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-save"></i> Simpan Akun Kasir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= 4. MODAL DETAIL TRANSAKSI ================= -->
+    <div id="tx-detail-modal" class="modal-overlay">
+        <div class="modal-content tx-detail-content">
+            <div class="modal-header">
+                <h2>Rincian Transaksi POS</h2>
+                <button class="btn-close-modal" onclick="closeModal('tx-detail-modal')">&times;</button>
+            </div>
+            
+            <div class="tx-detail-body">
+                <div class="tx-detail-info-grid">
+                    <div class="info-block">
+                        <label>ID Transaksi</label>
+                        <h4 id="tx-detail-id">TX-XXXXXX</h4>
+                    </div>
+                    <div class="info-block">
+                        <label>Tanggal & Waktu</label>
+                        <h4 id="tx-detail-date">27 Mei 2026</h4>
+                    </div>
+                    <div class="info-block mt-12">
+                        <label>Kasir Petugas</label>
+                        <h4 id="tx-detail-cashier">Kasir</h4>
+                    </div>
+                    <div class="info-block mt-12">
+                        <label>Metode Pembayaran</label>
+                        <h4 id="tx-detail-method">Cash</h4>
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <h3>Daftar Item Pembelian</h3>
+                <div class="table-responsive" style="max-height: 200px;">
+                    <table class="modern-table">
+                        <thead>
+                            <tr>
+                                <th>Menu</th>
+                                <th style="text-align: right;">Harga</th>
+                                <th style="text-align: center;">Qty</th>
+                                <th style="text-align: right;">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tx-detail-items-tbody">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <div class="tx-detail-totals">
+                    <div class="total-line">
+                        <span>Subtotal:</span>
+                        <span id="tx-detail-subtotal">Rp 0</span>
+                    </div>
+                    <div class="total-line">
+                        <span>Pajak (PPN 10%):</span>
+                        <span id="tx-detail-tax">Rp 0</span>
+                    </div>
+                    <div class="total-line">
+                        <span>Service Charge (5%):</span>
+                        <span id="tx-detail-service">Rp 0</span>
+                    </div>
+                    <div class="total-line grand-total-line">
+                        <span>Total Pembayaran:</span>
+                        <strong id="tx-detail-grand-total">Rp 0</strong>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('tx-detail-modal')">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 5. MODAL DETAIL ABSENSI ================= -->
+    <div id="absensi-detail-modal" class="modal-overlay">
+        <div class="modal-content sub-modal-content">
+            <div class="modal-header">
+                <h2>Rincian Kehadiran Kasir</h2>
+                <button class="btn-close-modal" onclick="closeModal('absensi-detail-modal')">&times;</button>
+            </div>
+            
+            <div class="card-body">
+                <div class="tx-detail-info-grid">
+                    <div class="info-block">
+                        <label>Nama Kasir</label>
+                        <h4 id="abs-detail-name">Aria Pratama</h4>
+                    </div>
+                    <div class="info-block">
+                        <label>Tanggal Kerja</label>
+                        <h4 id="abs-detail-date">27 Mei 2026</h4>
+                    </div>
+                    <div class="info-block mt-12">
+                        <label>Jam Masuk</label>
+                        <h4 id="abs-detail-in">08:00:00</h4>
+                    </div>
+                    <div class="info-block mt-12">
+                        <label>Jam Pulang</label>
+                        <h4 id="abs-detail-out">16:00:00</h4>
+                    </div>
+                    <div class="info-block mt-12 span-2">
+                        <label>Status Kehadiran</label>
+                        <h4 id="abs-detail-status"><span class="badge badge-success">Hadir</span></h4>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal('absensi-detail-modal')">Tutup</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 6. MODAL PENGGAJIAN (ADD & EDIT) ================= -->
+    <div id="payroll-modal" class="modal-overlay">
+        <div class="modal-content payroll-modal-content">
+            <div class="modal-header">
+                <h2 id="payroll-modal-title">Tambah Data Gaji Kasir</h2>
+                <button class="btn-close-modal" onclick="closeModal('payroll-modal')">&times;</button>
+            </div>
+
+            <form id="payroll-form" onsubmit="handlePayrollSubmit(event)">
+                <input type="hidden" id="payroll-form-id">
+
+                <div class="card-body">
+                    <!-- Nama Kasir -->
+                    <div class="form-group">
+                        <label for="payroll-form-cashier">Nama Kasir <span class="required">*</span></label>
+                        <select id="payroll-form-cashier" required>
+                            <!-- Dynamically populated from CASHIERS -->
+                        </select>
+                    </div>
+
+                    <!-- Periode -->
+                    <div class="form-group mt-12">
+                        <label for="payroll-form-period">Periode Gaji <span class="required">*</span></label>
+                        <input type="month" id="payroll-form-period" required>
+                    </div>
+
+                    <!-- Bayaran/Shift & Total Shift -->
+                    <div class="form-row-2 mt-12">
+                        <div class="form-group">
+                            <label for="payroll-form-rate">Bayaran per Shift (Rp) <span class="required">*</span></label>
+                            <div class="harga-input-wrapper">
+                                <span class="harga-prefix">Rp</span>
+                                <input type="number" id="payroll-form-rate" required min="0" value="75000" oninput="recalcPayroll()">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="payroll-form-shifts">Total Shift Hadir <span class="required">*</span></label>
+                            <input type="number" id="payroll-form-shifts" required min="0" placeholder="Contoh: 22" oninput="recalcPayroll()">
+                        </div>
+                    </div>
+
+                    <!-- Total Gaji (auto-calc) -->
+                    <div class="form-group mt-12">
+                        <label>Total Gaji</label>
+                        <div class="payroll-total-display" id="payroll-total-display">Rp 0</div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeModal('payroll-modal')">Batal</button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-save"></i> Simpan Data Gaji
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= 7. MODAL SLIP GAJI (PREVIEW & KIRIM EMAIL) ================= -->
+    <div id="slip-gaji-modal" class="modal-overlay">
+        <div class="modal-content slip-gaji-content">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-file-invoice-dollar"></i> Slip Gaji Kasir</h2>
+                <button class="btn-close-modal" onclick="closeModal('slip-gaji-modal')">&times;</button>
+            </div>
+
+            <div class="slip-gaji-body">
+                <!-- Slip Header -->
+                <div class="slip-header-brand">
+                    <div class="slip-logo"><i class="fa-solid fa-mug-hot"></i></div>
+                    <div>
+                        <h3>Kopi Sibei</h3>
+                        <p>Cafe Management System</p>
+                    </div>
+                </div>
+                <div class="slip-divider"></div>
+                <h4 class="slip-title">SLIP GAJI KARYAWAN</h4>
+
+                <!-- Info Grid -->
+                <div class="slip-info-grid">
+                    <div class="slip-info-row">
+                        <span class="slip-label">Nama Karyawan</span>
+                        <span class="slip-value" id="slip-cashier-name">—</span>
+                    </div>
+                    <div class="slip-info-row">
+                        <span class="slip-label">Email</span>
+                        <span class="slip-value" id="slip-cashier-email">—</span>
+                    </div>
+                    <div class="slip-info-row">
+                        <span class="slip-label">Periode Gaji</span>
+                        <span class="slip-value" id="slip-period">—</span>
+                    </div>
+                    <div class="slip-info-row">
+                        <span class="slip-label">Tanggal Diterbitkan</span>
+                        <span class="slip-value" id="slip-issued-date">—</span>
+                    </div>
+                </div>
+
+                <div class="slip-divider"></div>
+
+                <!-- Rincian Gaji -->
+                <div class="slip-detail-rows">
+                    <div class="slip-detail-row">
+                        <span>Bayaran per Shift</span>
+                        <span id="slip-rate">Rp 0</span>
+                    </div>
+                    <div class="slip-detail-row">
+                        <span>Total Shift Hadir</span>
+                        <span id="slip-shifts">0 shift</span>
+                    </div>
+                </div>
+
+                <div class="slip-total-box">
+                    <span>Total Gaji Diterima</span>
+                    <strong id="slip-total">Rp 0</strong>
+                </div>
+
+                <!-- Bukti Transfer Upload -->
+                <div class="bukti-tf-section">
+                    <div class="bukti-tf-label">
+                        <i class="fa-solid fa-image"></i>
+                        <span>Bukti Transfer</span>
+                        <button type="button" id="btn-hapus-bukti" class="btn-hapus-bukti hidden" onclick="hapusBuktiTF()">
+                            <i class="fa-solid fa-trash"></i> Hapus
+                        </button>
+                    </div>
+                    <div class="bukti-tf-upload-area" id="bukti-tf-upload-area" onclick="document.getElementById('bukti-tf-file-input').click()">
+                        <img id="bukti-tf-preview" src="" alt="Bukti Transfer" class="bukti-tf-preview-img hidden">
+                        <div id="bukti-tf-placeholder">
+                            <i class="fa-regular fa-image"></i>
+                            <span>Klik untuk upload foto bukti transfer</span>
+                            <small>JPG, PNG, WEBP (maks. 5MB)</small>
+                        </div>
+                    </div>
+                    <input type="file" id="bukti-tf-file-input" accept="image/*" style="display:none" onchange="handleBuktiTFUpload(this)">
+                </div>
+
+                <p class="slip-note">* Slip gaji ini diterbitkan secara resmi oleh sistem manajemen Kopi Sibei dan dapat digunakan sebagai bukti pembayaran.</p>
+            </div>
+
+            <div class="modal-footer slip-gaji-footer">
+                <button type="button" class="btn-secondary" onclick="closeModal('slip-gaji-modal')">Tutup</button>
+                <button type="button" class="btn-slip-email" id="btn-send-slip-email" onclick="sendSlipEmail()">
+                    <i class="fa-solid fa-paper-plane"></i> Kirim via Email
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= 7. MODAL KONFIRMASI KELUAR ================= -->
+    <div id="logout-confirm-modal" class="modal-overlay">
+        <div class="modal-content logout-modal-content">
+            <div class="logout-icon-wrapper animate-bounce">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </div>
+            <h2 style="text-align: center;">Konfirmasi Keluar</h2>
+            <p style="text-align: center;">Apakah Anda yakin ingin keluar dari sistem management dashboard Kopi Sibei ini?</p>
+            <div class="modal-footer justify-center" style="border-top: none; padding-top: 0;">
+                <button class="btn-secondary" onclick="closeModal('logout-confirm-modal')" style="width: 100px;">Batal</button>
+                <button class="btn-danger" id="btn-confirm-logout" style="width: 100px;">Keluar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/manager.js') }}"></script>
+</body>
+</html>

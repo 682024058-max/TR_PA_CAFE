@@ -1,0 +1,99 @@
+<!-- templates/manager/laporanpenjualan.html -->
+<!-- ================= 7. HALAMAN LAPORAN PENJUALAN ================= -->
+<section id="view-laporan-penjualan" class="app-view">
+    <!-- Metrics Summary Laporan -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon bg-green-soft"><i class="fa-solid fa-wallet text-green"></i></div>
+            <div class="stat-info">
+                <h3>Total Pemasukan</h3>
+                <p id="report-total-revenue">Rp 0</p>
+                <span class="stat-meta">Hasil filter aktif</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-cream-soft"><i class="fa-solid fa-circle-check text-brown"></i></div>
+            <div class="stat-info">
+                <h3>Transaksi Sukses</h3>
+                <p id="report-total-tx-count">0</p>
+                <span class="stat-meta">Selesai Terbayar</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon bg-blue-soft"><i class="fa-solid fa-user-tag text-blue"></i></div>
+            <div class="stat-info">
+                <h3>Kontributor Utama</h3>
+                <p id="report-top-cashier">-</p>
+                <span class="stat-meta">Transaksi Terbanyak</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-card mt-24">
+        <div class="card-header">
+            <h3><i class="fa-solid fa-file-invoice-dollar"></i> Laporan Detil Transaksi Cafe</h3>
+            <div class="export-buttons-group">
+                <button class="btn-secondary" id="btn-export-excel">
+                    <i class="fa-solid fa-file-excel text-green"></i> Export Excel
+                </button>
+                <button class="btn-primary" id="btn-export-pdf">
+                    <i class="fa-solid fa-file-pdf"></i> Export PDF Laporan
+                </button>
+            </div>
+        </div>
+        
+        <!-- Laporan Filters -->
+        <div class="riwayat-filter-header">
+            <div class="filter-group search-group">
+                <label for="report-search">Cari ID Transaksi</label>
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="report-search" placeholder="Cari nomor ID transaksi...">
+                </div>
+            </div>
+            <div class="filter-group">
+                <label for="report-date-start">Mulai Tanggal</label>
+                <input type="date" id="report-date-start">
+            </div>
+            <div class="filter-group">
+                <label for="report-date-end">Sampai Tanggal</label>
+                <input type="date" id="report-date-end">
+            </div>
+            <div class="filter-group">
+                <label for="report-payment-method">Metode Bayar</label>
+                <select id="report-payment-method">
+                    <option value="all">Semua Metode</option>
+                    <option value="Cash">Cash</option>
+                    <option value="QRIS">QRIS</option>
+                    <option value="Debit">Debit</option>
+                </select>
+            </div>
+            <button class="btn-secondary btn-reset-filters" id="btn-reset-report-filters" style="margin-bottom: 2px;">
+                <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+        </div>
+
+        <!-- Report Table -->
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>ID Transaksi</th>
+                            <th>Tanggal & Waktu</th>
+                            <th>Kasir Petugas</th>
+                            <th>Subtotal</th>
+                            <th>Pajak & Servis</th>
+                            <th>Total Akhir</th>
+                            <th>Metode</th>
+                            <th style="text-align: center;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-table-tbody">
+                        <!-- Dynamically injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
