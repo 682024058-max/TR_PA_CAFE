@@ -9,6 +9,7 @@ from flask_cors import CORS
 import pymysql, pymysql.cursors, decimal
 from datetime import date, datetime, timedelta
 from functools import wraps
+from security import hash_password, verify_password
 
 app = Flask(__name__)
 CORS(app)
@@ -79,13 +80,31 @@ def login():
         conn = get_db()
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id_user, nama, username, email, role, status "
-                "FROM users WHERE username=%s AND password=%s",
-                (username, password)
+                "SELECT id_user, nama, username, password, email, role, status "
+                "FROM users WHERE username=%s",
+                (username,)
             )
             user = cur.fetchone()
         if not user:
             return jsonify({"status":"error","message":"Username atau Password salah."}), 401
+            
+        # Verify password using security helper
+        is_correct, needs_upgrade = verify_password(user['password'], password)
+        if is_correct and needs_upgrade:
+            # Automatically upgrade/migrate plaintext password in the DB to hashed version
+            try:
+                hashed_pw = hash_password(password)
+                with conn.cursor() as upgrade_cur:
+                    upgrade_cur.execute(
+                        "UPDATE users SET password=%s WHERE id_user=%s",
+                        (hashed_pw, user['id_user'])
+                    )
+            except Exception as ex:
+                print("Failed to auto-upgrade password hash:", ex)
+                    
+        if not is_correct:
+            return jsonify({"status":"error","message":"Username atau Password salah."}), 401
+            
         if user['status'] == 'nonaktif':
             return jsonify({"status":"error","message":"Akun dinonaktifkan. Hubungi Manager."}), 403
         return jsonify({
@@ -128,10 +147,11 @@ def add_user():
     conn = None
     try:
         conn = get_db()
+        hashed_pw = hash_password(data['password'])
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO users (nama,username,password,email,role,status) VALUES (%s,%s,%s,%s,%s,'aktif')",
-                (data['nama'],data['username'],data['password'],data['email'],data['role'])
+                (data['nama'],data['username'],hashed_pw,data['email'],data['role'])
             )
         return jsonify({"status":"success","message":"User berhasil ditambahkan."}), 201
     except pymysql.err.IntegrityError:
@@ -152,7 +172,10 @@ def update_user(id_user):
             fields, values = [], []
             for col in ['nama','email','role','status','password']:
                 if col in data and data[col] is not None:
-                    fields.append(f"{col}=%s"); values.append(data[col])
+                    val = data[col]
+                    if col == 'password':
+                        val = hash_password(val)
+                    fields.append(f"{col}=%s"); values.append(val)
             if not fields:
                 return jsonify({"status":"error","message":"Tidak ada data yang diubah."}), 400
             values.append(id_user)
