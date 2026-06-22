@@ -997,6 +997,175 @@ def manual_email_report():
             }), 500
 
 # ============================================================
+#  PENGGAJIAN (PAYROLL CRUD)
+# ============================================================
+def init_payroll_table():
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS penggajian (
+                    id_penggajian INT AUTO_INCREMENT PRIMARY KEY,
+                    id_kasir INT NOT NULL,
+                    periode VARCHAR(7) NOT NULL,
+                    rate_per_shift INT NOT NULL DEFAULT 75000,
+                    total_shift INT NOT NULL DEFAULT 0,
+                    total_gaji INT NOT NULL,
+                    bukti_tf LONGTEXT DEFAULT NULL,
+                    tanggal_dibuat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (id_kasir) REFERENCES users(id_user) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+        print("Tabel penggajian berhasil diinisialisasi.")
+    except Exception as e:
+        print("Gagal menginisialisasi tabel penggajian:", e)
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll', methods=['GET'])
+@role_required('manager')
+def get_payroll():
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT p.id_penggajian AS id, u.nama AS cashier, p.periode AS period, "
+                "p.rate_per_shift AS ratePerShift, p.total_shift AS totalShifts, "
+                "p.total_gaji AS totalSalary, p.bukti_tf AS buktiTF "
+                "FROM penggajian p JOIN users u ON p.id_kasir = u.id_user "
+                "ORDER BY p.id_penggajian DESC"
+            )
+            rows = cur.fetchall()
+        return jsonify({"status":"success","data":rows_to_json(rows)}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll', methods=['POST'])
+@role_required('manager')
+def add_payroll():
+    data = request.get_json() or {}
+    cashier_name = data.get('cashier', '').strip()
+    period = data.get('period', '').strip()
+    rate_per_shift = int(data.get('ratePerShift', 75000))
+    total_shifts = int(data.get('totalShifts', 0))
+    total_salary = rate_per_shift * total_shifts
+    
+    if not cashier_name or not period:
+        return jsonify({"status":"error","message":"Nama kasir dan periode wajib diisi!"}), 400
+        
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            # Cari id_user untuk kasir
+            cur.execute("SELECT id_user FROM users WHERE nama=%s LIMIT 1", (cashier_name,))
+            user = cur.fetchone()
+            if not user:
+                return jsonify({"status":"error","message":f"Kasir dengan nama '{cashier_name}' tidak ditemukan."}), 404
+            
+            # Cek apakah sudah pernah diinput untuk kasir dan periode yang sama
+            cur.execute("SELECT id_penggajian FROM penggajian WHERE id_kasir=%s AND periode=%s", (user['id_user'], period))
+            if cur.fetchone():
+                return jsonify({"status":"error","message":f"Data gaji untuk {cashier_name} periode {period} sudah ada."}), 409
+                
+            cur.execute(
+                "INSERT INTO penggajian (id_kasir, periode, rate_per_shift, total_shift, total_gaji) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (user['id_user'], period, rate_per_shift, total_shifts, total_salary)
+            )
+        return jsonify({"status":"success","message":"Data penggajian kasir berhasil ditambahkan."}), 201
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll/<int:id_payroll>', methods=['PUT'])
+@role_required('manager')
+def update_payroll(id_payroll):
+    data = request.get_json() or {}
+    cashier_name = data.get('cashier', '').strip()
+    period = data.get('period', '').strip()
+    rate_per_shift = int(data.get('ratePerShift', 75000))
+    total_shifts = int(data.get('totalShifts', 0))
+    total_salary = rate_per_shift * total_shifts
+    
+    if not cashier_name or not period:
+        return jsonify({"status":"error","message":"Nama kasir dan periode wajib diisi!"}), 400
+        
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            # Cari id_user untuk kasir
+            cur.execute("SELECT id_user FROM users WHERE nama=%s LIMIT 1", (cashier_name,))
+            user = cur.fetchone()
+            if not user:
+                return jsonify({"status":"error","message":f"Kasir dengan nama '{cashier_name}' tidak ditemukan."}), 404
+                
+            cur.execute(
+                "UPDATE penggajian SET id_kasir=%s, periode=%s, rate_per_shift=%s, total_shift=%s, total_gaji=%s "
+                "WHERE id_penggajian=%s",
+                (user['id_user'], period, rate_per_shift, total_shifts, total_salary, id_payroll)
+            )
+        return jsonify({"status":"success","message":"Data penggajian kasir berhasil diperbarui."}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll/<int:id_payroll>', methods=['DELETE'])
+@role_required('manager')
+def delete_payroll(id_payroll):
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM penggajian WHERE id_penggajian=%s", (id_payroll,))
+        return jsonify({"status":"success","message":"Data penggajian kasir berhasil dihapus."}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll/<int:id_payroll>/upload-bukti', methods=['POST'])
+@role_required('manager')
+def upload_bukti_payroll(id_payroll):
+    data = request.get_json() or {}
+    bukti_tf = data.get('buktiTF')
+    
+    if not bukti_tf:
+        return jsonify({"status":"error","message":"Bukti transfer kosong!"}), 400
+        
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE penggajian SET bukti_tf=%s WHERE id_penggajian=%s", (bukti_tf, id_payroll))
+        return jsonify({"status":"success","message":"Bukti transfer berhasil disimpan ke database."}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll/<int:id_payroll>/bukti', methods=['DELETE'])
+@role_required('manager')
+def delete_bukti_payroll(id_payroll):
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE penggajian SET bukti_tf=NULL WHERE id_penggajian=%s", (id_payroll,))
+        return jsonify({"status":"success","message":"Bukti transfer berhasil dihapus."}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+# ============================================================
 #  PAGE ROUTING (rendering templates)
 # ============================================================
 @app.route('/')
@@ -1018,6 +1187,7 @@ def route_manager():
 # ============================================================
 if __name__ == '__main__':
     import os
+    init_payroll_table()
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
         scheduler_thread = threading.Thread(target=run_auto_report_scheduler, daemon=True)
         scheduler_thread.start()

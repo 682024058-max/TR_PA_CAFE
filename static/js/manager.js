@@ -17,9 +17,9 @@ let CASHIERS     = [];
 let TRANSACTIONS = [];
 let ATTENDANCES  = [];
 
-// ── Penggajian: localStorage only (tidak ada endpoint di DB) ─
-let PAYROLL = JSON.parse(localStorage.getItem("pos_payroll")) || [];
-function syncPayrollToStorage() { localStorage.setItem("pos_payroll", JSON.stringify(PAYROLL)); }
+// ── Penggajian: Database-backed ──
+let PAYROLL = [];
+
 
 // ── Charts ───────────────────────────────────────────────────
 let revenueChart = null;
@@ -133,7 +133,7 @@ function initNavigationRouter() {
             else if (target === "kelola-menu")         { loadMenuItems(); switchInnerTab('daftar-menu'); }
             else if (target === "kelola-kasir")        loadCashiers();
             else if (target === "monitoring-absensi")  loadAbsensi();
-            else if (target === "penggajian")          { renderPayrollTable(); updatePayrollMetrics(); }
+            else if (target === "penggajian")          { loadPayroll().then(() => { renderPayrollTable(); updatePayrollMetrics(); }); }
             else if (target === "laporan-penjualan")   loadTransactions();
         });
     });
@@ -981,8 +981,17 @@ window.viewTransactionDetail = async function(id) {
 }
 
 // ============================================================
-// PENGGAJIAN (localStorage — tidak ada endpoint di backend)
+// PENGGAJIAN (Database-backed CRUD)
 // ============================================================
+async function loadPayroll() {
+    try {
+        const data = await apiFetch(`${API_BASE}/payroll`);
+        PAYROLL = data.data || [];
+    } catch(e) {
+        showToast('Gagal memuat data penggajian: ' + e.message, 'danger');
+    }
+}
+
 function initPayrollController() {
     const addBtn      = document.getElementById("btn-add-payroll-modal");
     const search      = document.getElementById("payroll-search");
@@ -1106,15 +1115,19 @@ window.editPayroll = function(id) {
     openModal("payroll-modal");
 }
 
-window.deletePayroll = function(id) {
+window.deletePayroll = async function(id) {
     if (!confirm("Apakah Anda yakin ingin menghapus data penggajian ini?")) return;
-    PAYROLL = PAYROLL.filter(p => p.id !== id);
-    syncPayrollToStorage();
-    renderPayrollTable();
-    showToast("Data penggajian berhasil dihapus!", "success");
+    try {
+        await apiFetch(`${API_BASE}/payroll/${id}`, { method: 'DELETE' });
+        showToast("Data penggajian berhasil dihapus!", "success");
+        await loadPayroll();
+        renderPayrollTable();
+    } catch(e) {
+        showToast("Gagal menghapus data penggajian: " + e.message, "danger");
+    }
 }
 
-function handlePayrollSubmit(e) {
+async function handlePayrollSubmit(e) {
     e.preventDefault();
     const idVal       = document.getElementById("payroll-form-id").value;
     const cashier     = document.getElementById("payroll-form-cashier").value;
@@ -1122,20 +1135,29 @@ function handlePayrollSubmit(e) {
     const ratePerShift = parseInt(document.getElementById("payroll-form-rate").value)   || 75000;
     const totalShifts  = parseInt(document.getElementById("payroll-form-shifts").value) || 0;
     const totalSalary  = ratePerShift * totalShifts;
-    if (idVal) {
-        const idx = PAYROLL.findIndex(p => p.id === parseInt(idVal));
-        if (idx !== -1) {
-            PAYROLL[idx] = { id: parseInt(idVal), cashier, period, ratePerShift, totalShifts, totalSalary };
+    
+    const payload = { cashier, period, ratePerShift, totalShifts, totalSalary };
+    
+    try {
+        if (idVal) {
+            await apiFetch(`${API_BASE}/payroll/${idVal}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
             showToast("Data penggajian berhasil diperbarui!", "success");
+        } else {
+            await apiFetch(`${API_BASE}/payroll`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            showToast("Data penggajian baru berhasil ditambahkan!", "success");
         }
-    } else {
-        const nextId = PAYROLL.length > 0 ? Math.max(...PAYROLL.map(p => p.id)) + 1 : 1;
-        PAYROLL.push({ id: nextId, cashier, period, ratePerShift, totalShifts, totalSalary });
-        showToast("Data penggajian baru berhasil ditambahkan!", "success");
+        closeModal("payroll-modal");
+        await loadPayroll();
+        renderPayrollTable();
+    } catch(e) {
+        showToast("Gagal menyimpan data penggajian: " + e.message, "danger");
     }
-    syncPayrollToStorage();
-    closeModal("payroll-modal");
-    renderPayrollTable();
 }
 window.handlePayrollSubmit = handlePayrollSubmit;
 
@@ -1181,34 +1203,57 @@ window.handleBuktiTFUpload = function(input) {
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { showToast("Ukuran file maksimal 5MB!", "warning"); return; }
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         const dataUrl     = e.target.result;
         const preview     = document.getElementById("bukti-tf-preview");
         const placeholder = document.getElementById("bukti-tf-placeholder");
         const hapusBtn    = document.getElementById("btn-hapus-bukti");
-        preview.src = dataUrl; preview.classList.remove("hidden");
-        placeholder.style.display = "none"; hapusBtn.classList.remove("hidden");
-        if (_currentSlipData) {
-            const idx = PAYROLL.findIndex(x => x.id === _currentSlipData.p.id);
-            if (idx !== -1) { PAYROLL[idx].buktiTF = dataUrl; syncPayrollToStorage(); _currentSlipData.p = PAYROLL[idx]; }
+        
+        if (!_currentSlipData) return;
+        
+        try {
+            await apiFetch(`${API_BASE}/payroll/${_currentSlipData.p.id}/upload-bukti`, {
+                method: 'POST',
+                body: JSON.stringify({ buktiTF: dataUrl })
+            });
+            
+            preview.src = dataUrl; preview.classList.remove("hidden");
+            placeholder.style.display = "none"; hapusBtn.classList.remove("hidden");
+            
+            await loadPayroll();
+            const updatedP = PAYROLL.find(x => x.id === _currentSlipData.p.id);
+            if (updatedP) _currentSlipData.p = updatedP;
+            
+            showToast("Bukti transfer berhasil diupload!", "success");
+        } catch(err) {
+            showToast("Gagal mengupload bukti transfer: " + err.message, "danger");
         }
-        showToast("Bukti transfer berhasil diupload!", "success");
     };
     reader.readAsDataURL(file);
 }
 
-window.hapusBuktiTF = function() {
+window.hapusBuktiTF = async function() {
     if (!_currentSlipData) return;
     const preview     = document.getElementById("bukti-tf-preview");
     const placeholder = document.getElementById("bukti-tf-placeholder");
     const hapusBtn    = document.getElementById("btn-hapus-bukti");
     const fileInput   = document.getElementById("bukti-tf-file-input");
-    preview.src = ""; preview.classList.add("hidden");
-    placeholder.style.display = "flex"; hapusBtn.classList.add("hidden");
-    if (fileInput) fileInput.value = "";
-    const idx = PAYROLL.findIndex(x => x.id === _currentSlipData.p.id);
-    if (idx !== -1) { delete PAYROLL[idx].buktiTF; syncPayrollToStorage(); _currentSlipData.p = PAYROLL[idx]; }
-    showToast("Bukti transfer dihapus.", "success");
+    
+    try {
+        await apiFetch(`${API_BASE}/payroll/${_currentSlipData.p.id}/bukti`, { method: 'DELETE' });
+        
+        preview.src = ""; preview.classList.add("hidden");
+        placeholder.style.display = "flex"; hapusBtn.classList.add("hidden");
+        if (fileInput) fileInput.value = "";
+        
+        await loadPayroll();
+        const updatedP = PAYROLL.find(x => x.id === _currentSlipData.p.id);
+        if (updatedP) _currentSlipData.p = updatedP;
+        
+        showToast("Bukti transfer dihapus.", "success");
+    } catch(err) {
+        showToast("Gagal menghapus bukti transfer: " + err.message, "danger");
+    }
 }
 
 window.sendSlipEmail = function() {
