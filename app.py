@@ -936,7 +936,7 @@ def run_auto_report_scheduler():
 
                 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Pemicu scheduler harian aktif untuk tanggal {report_date}...")
                 recipient = get_manager_email()
-                subject = f"☕ Laporan Penjualan Harian - {report_date}"
+                subject = f"Laporan Penjualan Harian - {report_date}"
                 html_content = build_sales_report_html(report_date, report_date)
                 
                 if html_content:
@@ -973,7 +973,7 @@ def manual_email_report():
     if not html_content:
         return jsonify({"status": "error", "message": "Gagal menyusun laporan penjualan."}), 500
         
-    subject = f"☕ Laporan Penjualan Cafe ({start_date} s/d {end_date})"
+    subject = f"Laporan Penjualan Cafe ({start_date} s/d {end_date})"
     success = send_email_via_resend(recipient, subject, html_content)
     
     if success:
