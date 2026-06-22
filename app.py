@@ -1023,6 +1023,33 @@ def init_payroll_table():
     finally:
         if conn: conn.close()
 
+@app.route('/api/payroll/calculate-shifts', methods=['GET'])
+@role_required('manager')
+def calculate_shifts():
+    cashier_name = request.args.get('cashier', '').strip()
+    period = request.args.get('period', '').strip() # format 'YYYY-MM'
+    
+    if not cashier_name or not period:
+        return jsonify({"status":"error","message":"Parameters 'cashier' and 'period' are required."}), 400
+        
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            # Hitung jumlah kehadiran di absensi pada periode tersebut
+            cur.execute(
+                "SELECT COUNT(*) AS total_shifts FROM absensi "
+                "WHERE nama_kasir=%s AND DATE_FORMAT(date, '%%Y-%%m')=%s AND status='Hadir'",
+                (cashier_name, period)
+            )
+            res = cur.fetchone()
+            total_shifts = res['total_shifts'] if res else 0
+        return jsonify({"status":"success","total_shifts":total_shifts}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
 @app.route('/api/payroll', methods=['GET'])
 @role_required('manager')
 def get_payroll():
@@ -1030,6 +1057,59 @@ def get_payroll():
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # 1. Ambil semua kasir yang aktif
+            cur.execute("SELECT id_user, nama FROM users WHERE role='kasir'")
+            cashiers = cur.fetchall()
+            
+            # 2. Ambil semua periode unik (bulan-tahun) dari tabel absensi
+            cur.execute("SELECT DISTINCT DATE_FORMAT(date, '%Y-%m') AS period FROM absensi WHERE date IS NOT NULL")
+            periods = [row['period'] for row in cur.fetchall() if row['period']]
+            
+            # Jika tabel absensi masih kosong, tambahkan periode bulan ini sebagai default
+            if not periods:
+                periods = [datetime.now().strftime('%Y-%m')]
+                
+            for period in periods:
+                for cashier in cashiers:
+                    # Hitung total kehadiran shift kasir tersebut pada periode ini
+                    cur.execute(
+                        "SELECT COUNT(*) AS total_shifts FROM absensi "
+                        "WHERE nama_kasir=%s AND DATE_FORMAT(date, '%%Y-%%m')=%s AND status='Hadir'",
+                        (cashier['nama'], period)
+                    )
+                    res = cur.fetchone()
+                    total_shifts = res['total_shifts'] if res else 0
+                    
+                    # Kita hanya buat data gaji otomatis jika kasir tersebut memiliki minimal 1 kehadiran/shift
+                    if total_shifts > 0:
+                        # Cek apakah sudah ada di tabel penggajian
+                        cur.execute(
+                            "SELECT id_penggajian, rate_per_shift FROM penggajian "
+                            "WHERE id_kasir=%s AND periode=%s",
+                            (cashier['id_user'], period)
+                        )
+                        exist = cur.fetchone()
+                        
+                        if not exist:
+                            # Belum ada -> Insert data gaji baru (default rate Rp 75.000)
+                            default_rate = 75000
+                            total_salary = default_rate * total_shifts
+                            cur.execute(
+                                "INSERT INTO penggajian (id_kasir, periode, rate_per_shift, total_shift, total_gaji) "
+                                "VALUES (%s, %s, %s, %s, %s)",
+                                (cashier['id_user'], period, default_rate, total_shifts, total_salary)
+                            )
+                        else:
+                            # Sudah ada -> Update total_shift & total_gaji berdasarkan absensi terbaru
+                            rate = exist['rate_per_shift']
+                            total_salary = rate * total_shifts
+                            cur.execute(
+                                "UPDATE penggajian SET total_shift=%s, total_gaji=%s "
+                                "WHERE id_penggajian=%s",
+                                (total_shifts, total_salary, exist['id_penggajian'])
+                            )
+            
+            # 3. Ambil data penggajian final untuk dikirim ke frontend
             cur.execute(
                 "SELECT p.id_penggajian AS id, u.nama AS cashier, p.periode AS period, "
                 "p.rate_per_shift AS ratePerShift, p.total_shift AS totalShifts, "

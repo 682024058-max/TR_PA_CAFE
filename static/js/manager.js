@@ -999,6 +999,11 @@ function initPayrollController() {
     const resetBtn    = document.getElementById("btn-reset-payroll-filters");
     const exportBtn   = document.getElementById("btn-export-payroll-excel");
 
+    const shiftsInput = document.getElementById("payroll-form-shifts");
+    if (shiftsInput) {
+        shiftsInput.readOnly = true;
+    }
+
     if (addBtn) {
         addBtn.addEventListener("click", () => {
             document.getElementById("payroll-form")?.reset();
@@ -1011,6 +1016,10 @@ function initPayrollController() {
             openModal("payroll-modal");
         });
     }
+    
+    document.getElementById("payroll-form-cashier")?.addEventListener("change", triggerAutoCalculateShifts);
+    document.getElementById("payroll-form-period")?.addEventListener("change", triggerAutoCalculateShifts);
+
     if (search)      search.addEventListener("input", renderPayrollTable);
     if (filterMonth) filterMonth.addEventListener("change", renderPayrollTable);
     if (resetBtn) {
@@ -1021,6 +1030,34 @@ function initPayrollController() {
         });
     }
     if (exportBtn) exportBtn.addEventListener("click", exportPayrollExcel);
+}
+
+async function triggerAutoCalculateShifts() {
+    const cashier = document.getElementById("payroll-form-cashier")?.value;
+    const period  = document.getElementById("payroll-form-period")?.value;
+    const shiftsInput = document.getElementById("payroll-form-shifts");
+    
+    if (!cashier || !period) return;
+    
+    if (shiftsInput) {
+        shiftsInput.value = "";
+        shiftsInput.placeholder = "Menghitung...";
+    }
+    
+    try {
+        const res = await apiFetch(`${API_BASE}/payroll/calculate-shifts?cashier=${encodeURIComponent(cashier)}&period=${period}`);
+        if (shiftsInput) {
+            shiftsInput.value = res.total_shifts || 0;
+            shiftsInput.placeholder = "Contoh: 22";
+            recalcPayroll();
+        }
+    } catch (e) {
+        console.error(e);
+        showToast("Gagal menghitung shift otomatis: " + e.message, "danger");
+        if (shiftsInput) {
+            shiftsInput.placeholder = "Gagal memuat";
+        }
+    }
 }
 
 function populatePayrollCashierSelect() {
