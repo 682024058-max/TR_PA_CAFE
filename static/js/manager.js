@@ -5,7 +5,7 @@
 // Penggajian: localStorage only (tidak ada endpoint di backend)
 // ============================================================
 
-const API_BASE = 'http://127.0.0.1:5000/api';
+const API_BASE = '/api';
 
 // ── Session ──────────────────────────────────────────────────
 let SESSION = { id: null, nama: 'Manager', role: 'manager' };

@@ -71,7 +71,7 @@ window.handleLoginSubmit = function(event) {
     btnSubmit.querySelector(".btn-loader").classList.remove("hidden");
     
 
-    fetch("http://127.0.0.1:5000/api/login", {
+    fetch("/api/login", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
