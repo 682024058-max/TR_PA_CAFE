@@ -1,3 +1,6 @@
+CREATE DATABASE Absensi;
+use cafe;
+
 -- 1. Tabel users (Kasir & Manager)
 CREATE TABLE users (
     id_user INT AUTO_INCREMENT PRIMARY KEY,
