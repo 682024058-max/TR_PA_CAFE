@@ -1,4 +1,4 @@
-CREATE DATABASE Absensi;
+CREATE DATABASE cafe;
 use cafe;
 
 -- 1. Tabel users (Kasir & Manager)

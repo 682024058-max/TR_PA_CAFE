@@ -18,22 +18,64 @@ import json
 app = Flask(__name__)
 CORS(app)
 
-DB_HOST     = "localhost"
-DB_USER     = "root"
-DB_PASSWORD = ""
-DB_NAME     = "cafe"
-DB_PORT     = 3306
+import os
+import urllib.parse
+
+# Load .env file manually if exists (avoiding python-dotenv dependency)
+if os.path.exists(".env"):
+    try:
+        with open(".env", "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, val = line.split("=", 1)
+                    val = val.strip().strip("'").strip('"')
+                    os.environ[key.strip()] = val
+    except Exception as e:
+        print("Gagal membaca file .env secara manual:", e)
+
+# Parse DATABASE_URL if present, otherwise read individual variables
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    try:
+        # Standardize prefix for urlparse (mysql+pymysql:// -> mysql://)
+        url_str = DATABASE_URL
+        if url_str.startswith("mysql+pymysql://"):
+            url_str = url_str.replace("mysql+pymysql://", "mysql://", 1)
+        parsed = urllib.parse.urlparse(url_str)
+        DB_HOST     = parsed.hostname or "localhost"
+        DB_USER     = parsed.username or "root"
+        DB_PASSWORD = parsed.password or ""
+        DB_PORT     = parsed.port or 4000  # Default TiDB port is 4000
+        DB_NAME     = parsed.path.lstrip('/') or "cafe"
+    except Exception as e:
+        print("Gagal mem-parsing DATABASE_URL, menggunakan fallback default:", e)
+        DB_HOST     = os.environ.get("DB_HOST", "localhost")
+        DB_USER     = os.environ.get("DB_USER", "root")
+        DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+        DB_NAME     = os.environ.get("DB_NAME", "cafe")
+        DB_PORT     = int(os.environ.get("DB_PORT", 3306))
+else:
+    DB_HOST     = os.environ.get("DB_HOST", "localhost")
+    DB_USER     = os.environ.get("DB_USER", "root")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+    DB_NAME     = os.environ.get("DB_NAME", "cafe")
+    DB_PORT     = int(os.environ.get("DB_PORT", 3306))
 
 # ── Konfigurasi Resend API & Laporan Otomatis ────────────────
-RESEND_API_KEY = "re_KaTaQNWQ_EJvAZLzSKgJE3nyiEUZHJ2Nx"
-RESEND_SENDER  = "Kopi Sibei <onboarding@resend.dev>"
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "re_KaTaQNWQ_EJvAZLzSKgJE3nyiEUZHJ2Nx")
+RESEND_SENDER  = os.environ.get("RESEND_SENDER", "Kopi Sibei <onboarding@resend.dev>")
 AUTO_REPORT_TIME = "00:00"  # Format HH:MM (24 jam)
 
 # ── Koneksi ──────────────────────────────────────────────────
 def get_db():
+    ssl_config = None
+    if "localhost" not in DB_HOST:
+        ssl_config = {'ssl': {}}
+        
     return pymysql.connect(
         host=DB_HOST, user=DB_USER, password=DB_PASSWORD,
-        database=DB_NAME, port=DB_PORT,
+        database=DB_NAME, port=DB_PORT, ssl=ssl_config,
         cursorclass=pymysql.cursors.DictCursor, autocommit=True
     )
 
@@ -995,6 +1037,26 @@ def manual_email_report():
                 "status": "error", 
                 "message": "Gagal mengirimkan email via Resend API. Periksa koneksi internet atau status API Key Anda."
             }), 500
+
+@app.route('/api/cron/daily-report', methods=['GET', 'POST'])
+def cron_daily_report():
+    # Mengamankan endpoint agar hanya bisa dipanggil oleh server Vercel Cron
+    is_vercel_cron = request.headers.get("X-Vercel-Signature")
+    if os.environ.get("VERCEL") == "1" and not is_vercel_cron:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    # Ambil tanggal kemarin untuk dilaporkan
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    recipient = get_manager_email()
+    subject = f"☕ [AUTO] Laporan Penjualan Harian - {yesterday}"
+    html_content = build_sales_report_html(yesterday, yesterday)
+    
+    if html_content:
+        success = send_email_via_resend(recipient, subject, html_content)
+        if success:
+            return jsonify({"status": "success", "message": f"Cron sukses mengirim laporan {yesterday} ke {recipient}."}), 200
+        
+    return jsonify({"status": "error", "message": "Gagal mengirim laporan otomatis."}), 500
 
 # ============================================================
 #  PENGGAJIAN (PAYROLL CRUD)
