@@ -1297,40 +1297,32 @@ window.hapusBuktiTF = async function() {
     }
 }
 
-window.sendSlipEmail = function() {
+window.sendSlipEmail = async function() {
     if (!_currentSlipData) return;
-    const { p, cashierEmail, periodLabel, issuedDate } = _currentSlipData;
+    const { p, cashierEmail } = _currentSlipData;
     if (cashierEmail === "(email tidak terdaftar)") { showToast("Email kasir tidak terdaftar!", "warning"); return; }
-    const hasBukti = !!p.buktiTF;
-    const subject  = encodeURIComponent(`[Kopi Sibei] Slip Gaji - ${p.cashier} - ${periodLabel}`);
-    const body = encodeURIComponent(
-`Yth. ${p.cashier},
-
-Berikut adalah slip gaji Anda untuk periode ${periodLabel}:
-
-================================================
-        SLIP GAJI KARYAWAN - KOPI SIBEI
-================================================
-Nama Karyawan   : ${p.cashier}
-Email           : ${cashierEmail}
-Periode Gaji    : ${periodLabel}
-Tanggal Terbit  : ${issuedDate}
-------------------------------------------------
-Bayaran per Shift : ${formatIDR(p.ratePerShift || 75000)}
-Total Shift Hadir : ${p.totalShifts || 0} shift
-------------------------------------------------
-TOTAL GAJI      : ${formatIDR(p.totalSalary)}
-================================================
-${hasBukti ? '\n[✓] Bukti transfer telah diupload oleh manager.' : ''}
-
-Gaji telah ditransfer ke rekening Anda.
-Jika ada pertanyaan, hubungi manajemen Kopi Sibei.
-
-Hormat kami,
-Manajemen Kopi Sibei`
-    );
-    window.location.href = `mailto:${cashierEmail}?subject=${subject}&body=${body}`;
-    showToast(`Email dikirim ke ${cashierEmail}!`, "success");
+    
+    const btn = document.getElementById("btn-send-slip-email");
+    const originalText = btn ? btn.innerHTML : "Kirim Slip Email";
+    if (btn) {
+        btn.setAttribute("disabled", "true");
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+    }
+    
+    try {
+        const result = await apiFetch(`${API_BASE}/payroll/${p.id}/send-email`, {
+            method: "POST"
+        });
+        showToast(result.message || "Slip gaji berhasil dikirim ke email!", "success");
+    } catch (err) {
+        console.error(err);
+        showToast("Gagal mengirim slip gaji: " + err.message, "danger");
+    } finally {
+        if (btn) {
+            btn.removeAttribute("disabled");
+            btn.innerHTML = originalText;
+        }
+    }
 }
 
 // ============================================================
