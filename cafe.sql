@@ -25,6 +25,7 @@ CREATE TABLE products (
     id_products INT AUTO_INCREMENT PRIMARY KEY,
     nama_produk VARCHAR(150) NOT NULL,
     kategori VARCHAR(50) NOT NULL,            
+    harga INT NOT NULL,
     icon VARCHAR(50) NOT NULL DEFAULT 'fa-mug-hot',
     warna VARCHAR(10) NOT NULL DEFAULT '#4e3629',
     dibuat_ TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

@@ -130,7 +130,7 @@ function initNavigationRouter() {
 
             // Reload data per section
             if      (target === "dashboard")           loadDashboardData();
-            else if (target === "kelola-menu")         { loadMenuItems(); switchInnerTab('daftar-menu'); }
+            else if (target === "kelola-menu")         { loadCategories().then(() => loadMenuItems()); switchInnerTab('daftar-menu'); }
             else if (target === "kelola-kasir")        loadCashiers();
             else if (target === "monitoring-absensi")  loadAbsensi();
             else if (target === "penggajian")          { loadPayroll().then(() => { renderPayrollTable(); updatePayrollMetrics(); }); }
@@ -389,7 +389,11 @@ function initMenuCRUD() {
         document.getElementById("menu-form-id").value = "";
         document.getElementById("menu-modal-title").textContent = "Tambah Menu Baru";
         resetMenuPhotoArea();
-        populateMenuFormCategories();
+        if (!CATEGORIES.length) {
+            loadCategories().then(() => populateMenuFormCategories());
+        } else {
+            populateMenuFormCategories();
+        }
         openModal("menu-modal");
     });
     document.getElementById("menu-search")?.addEventListener("input", filterMenuTable);

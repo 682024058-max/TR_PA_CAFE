@@ -22,9 +22,11 @@ import os
 import urllib.parse
 
 # Load .env file manually if exists (avoiding python-dotenv dependency)
-if os.path.exists(".env"):
+base_dir = os.path.dirname(os.path.abspath(__file__))
+env_path = os.path.join(base_dir, ".env")
+if os.path.exists(env_path):
     try:
-        with open(".env", "r") as f:
+        with open(env_path, "r") as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
@@ -47,19 +49,19 @@ if DATABASE_URL:
         DB_USER     = parsed.username or "root"
         DB_PASSWORD = parsed.password or ""
         DB_PORT     = parsed.port or 4000  # Default TiDB port is 4000
-        DB_NAME     = parsed.path.lstrip('/') or "cafe"
+        DB_NAME     = parsed.path.lstrip('/') or "Sibei"
     except Exception as e:
         print("Gagal mem-parsing DATABASE_URL, menggunakan fallback default:", e)
         DB_HOST     = os.environ.get("DB_HOST", "localhost")
         DB_USER     = os.environ.get("DB_USER", "root")
         DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
-        DB_NAME     = os.environ.get("DB_NAME", "cafe")
+        DB_NAME     = os.environ.get("DB_NAME", "Sibei")
         DB_PORT     = int(os.environ.get("DB_PORT", 3306))
 else:
     DB_HOST     = os.environ.get("DB_HOST", "localhost")
     DB_USER     = os.environ.get("DB_USER", "root")
     DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
-    DB_NAME     = os.environ.get("DB_NAME", "cafe")
+    DB_NAME     = os.environ.get("DB_NAME", "Sibei")
     DB_PORT     = int(os.environ.get("DB_PORT", 3306))
 
 # ── Konfigurasi Resend API & Laporan Otomatis ────────────────
@@ -1307,7 +1309,7 @@ def delete_bukti_payroll(id_payroll):
     finally:
         if conn: conn.close()
 
-# ============================================================
+# ============================================================ 
 #  PAGE ROUTING (rendering templates)
 # ============================================================
 @app.route('/')
