@@ -17,6 +17,7 @@ let SESSION = { id: null, nama: 'Kasir', role: 'kasir' };
 // ── State Global ─────────────────────────────────────────────
 let MENU_ITEMS     = [];
 let transactions   = [];
+let historyTransactions = [];
 let attendanceLogs = [];
 let cart           = [];
 let activeCategory = 'all';
@@ -325,9 +326,9 @@ function resetCartState() { cart = []; renderCartList(); }
 
 function calculateCartState() {
     const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    const tax = Math.round(sub * 0.1);
-    const svc = Math.round(sub * 0.05);
-    updateCartTotals(sub, tax, svc, sub + tax + svc);
+    const tax = 0;
+    const svc = 0;
+    updateCartTotals(sub, tax, svc, sub);
 }
 
 function updateCartTotals(sub, tax, svc, total) {
@@ -348,9 +349,9 @@ function initPaymentInteractions() {
     checkoutBtn?.addEventListener('click', () => {
         if (!cart.length) return;
         const sub   = cart.reduce((s, i) => s + i.price * i.qty, 0);
-        const tax   = Math.round(sub * 0.1);
-        const svc   = Math.round(sub * 0.05);
-        const total = sub + tax + svc;
+        const tax   = 0;
+        const svc   = 0;
+        const total = sub;
 
         document.getElementById('payment-grand-total').innerText = formatIDR(total);
         document.getElementById('payment-grand-total').setAttribute('data-amount', total);
@@ -424,8 +425,8 @@ async function processActiveCheckout() {
     }
 
     const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    const tax = Math.round(sub * 0.1);
-    const svc = Math.round(sub * 0.05);
+    const tax = 0;
+    const svc = 0;
 
     // ── Payload sesuai kolom transaksi & detail_transaksi ──
     // transaksi  : uang_bayar, kembalian, metode_pembayaran
@@ -460,7 +461,7 @@ async function processActiveCheckout() {
                 date: getFormattedDateTime(new Date()),
                 cashier: SESSION.nama,
                 items: [...cart],
-                subtotal: sub, tax, service: svc,
+                subtotal: sub, tax: 0, service: 0,
                 grandTotal, method, cashPaid, change
             };
             closeModal('payment-modal');
@@ -542,7 +543,11 @@ function simulateReceiptPrint(tx, isReprint = false) {
 //                  metode_pembayaran, total_harga, nama_kasir
 // ============================================================
 async function loadTransaksiHariIni() {
-    const today = new Date().toISOString().slice(0, 10);
+    const dObj = new Date();
+    const year = dObj.getFullYear();
+    const month = String(dObj.getMonth() + 1).padStart(2, '0');
+    const date = String(dObj.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${date}`;
     try {
         const res  = await fetch(`${API_BASE}/transaksi?tanggal=${today}`, { headers: apiHeaders() });
         const data = await res.json();
@@ -561,15 +566,40 @@ async function loadTransaksiHariIni() {
             }));
             updateDashboardMetrics();
             renderRecentTransactionsTable();
-            renderTransactionsHistoryTable(transactions);
             updateChart();
         }
     } catch (e) { console.error('Gagal load transaksi:', e); }
 }
 
 // ============================================================
-//  RIWAYAT TRANSAKSI
+//  RIWAYAT TRANSAKSI (Filter & Load)
 // ============================================================
+async function loadRiwayatTransaksi(selectedDate = '') {
+    try {
+        let url = `${API_BASE}/transaksi`;
+        if (selectedDate) {
+            url += `?tanggal=${selectedDate}`;
+        }
+        const res  = await fetch(url, { headers: apiHeaders() });
+        const data = await res.json();
+        if (data.status === 'success') {
+            historyTransactions = data.data.map(tx => ({
+                id        : tx.id_transaksi,
+                txId      : `TX-${String(tx.id_transaksi).padStart(6,'0')}`,
+                date      : tx.tanggal_transaksi || '',
+                cashier   : tx.nama_kasir || SESSION.nama,
+                grandTotal: Number(tx.total_harga),
+                method    : tx.metode_pembayaran || 'Cash',
+                cashPaid  : Number(tx.uang_bayar  || tx.total_harga),
+                change    : Number(tx.kembalian   || 0),
+                status    : tx.status_transaksi || 'berhasil',
+                items     : []
+            }));
+            applyHistoryFilters();
+        }
+    } catch (e) { console.error('Gagal load riwayat transaksi:', e); }
+}
+
 function renderTransactionsHistoryTable(txArray) {
     const tbody = document.getElementById('history-transactions-tbody');
     if (!tbody) return;
@@ -615,25 +645,29 @@ function initHistoryFilters() {
     const txPayment = document.getElementById('tx-filter-payment');
     const btnReset  = document.getElementById('btn-reset-tx-filters');
 
+    async function onDateChange() {
+        await loadRiwayatTransaksi(txDate.value);
+    }
+
     function apply() {
         const q = (txSearch.value||'').toLowerCase();
-        const d = txDate.value;
         const p = txPayment.value;
-        const filtered = transactions.filter(tx => {
+        const filtered = historyTransactions.filter(tx => {
             const mQ = tx.txId.toLowerCase().includes(q) || tx.cashier.toLowerCase().includes(q);
             const mP = p === 'all' || tx.method === p;
-            const mD = !d || (tx.date||'').startsWith(d);
-            return mQ && mP && mD;
+            return mQ && mP;
         });
         renderTransactionsHistoryTable(filtered);
     }
 
+    window.applyHistoryFilters = apply;
+
     txSearch?.addEventListener('input', apply);
-    txDate?.addEventListener('change', apply);
+    txDate?.addEventListener('change', onDateChange);
     txPayment?.addEventListener('change', apply);
-    btnReset?.addEventListener('click', () => {
+    btnReset?.addEventListener('click', async () => {
         txSearch.value=''; txDate.value=''; txPayment.value='all';
-        renderTransactionsHistoryTable(transactions);
+        await loadRiwayatTransaksi('');
         showToast('Filter direset','success');
     });
 }
@@ -650,8 +684,8 @@ window.openTransactionDetails = async function (txId) {
         const items = tx.items || [];
         // Hitung ulang dari item (detail tidak simpan tax/service)
         const sub   = items.reduce((s, i) => s + Number(i.subtotal), 0);
-        const tax   = Math.round(sub * 0.1);
-        const svc   = Math.round(sub * 0.05);
+        const tax   = 0;
+        const svc   = 0;
 
         document.getElementById('detail-tx-id').innerText        = `TX-${String(tx.id_transaksi).padStart(6,'0')}`;
         document.getElementById('detail-tx-date').innerText      = formatTanggal(tx.tanggal_transaksi);
@@ -691,7 +725,7 @@ window.openTransactionDetails = async function (txId) {
                     price: Number(i.harga_satuan),
                     qty  : i.qty
                 })),
-                subtotal: sub, tax, service: svc,
+                subtotal: sub, tax: 0, service: 0,
                 grandTotal: Number(tx.total_harga),
                 method: tx.metode_pembayaran,
                 cashPaid: Number(tx.uang_bayar || tx.total_harga),
@@ -1026,7 +1060,7 @@ function initNavigationRouter() {
             if (pageTitle)
                 pageTitle.innerText = target.charAt(0).toUpperCase()+target.slice(1).replace('-',' ');
             if (target === 'dashboard') loadTransaksiHariIni();
-            if (target === 'riwayat')   loadTransaksiHariIni();
+            if (target === 'riwayat')   loadRiwayatTransaksi('');
             if (target === 'absensi')   loadRiwayatAbsensi();
             if (target === 'transaksi') applyMenuFilter();
         });

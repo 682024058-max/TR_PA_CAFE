@@ -81,7 +81,8 @@ def get_db():
     return pymysql.connect(
         host=DB_HOST, user=DB_USER, password=DB_PASSWORD,
         database=DB_NAME, port=DB_PORT, ssl=ssl_config,
-        cursorclass=pymysql.cursors.DictCursor, autocommit=True
+        cursorclass=pymysql.cursors.DictCursor, autocommit=True,
+        init_command="SET time_zone = '+07:00'"
     )
 
 def serialize(obj):

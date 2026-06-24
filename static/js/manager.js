@@ -219,8 +219,8 @@ function renderRecentTransactionsTable() {
     recent.forEach(tx => {
         const txId   = `TX-${String(tx.id_transaksi).padStart(6,'0')}`;
         const total  = Number(tx.total_harga || 0);
-        const sub    = Math.round(total / 1.15);
-        const taxSvc = total - sub;
+        const sub    = total;
+        const taxSvc = 0;
         const time   = (tx.tanggal_transaksi || '').slice(11, 19) || '-';
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -228,7 +228,7 @@ function renderRecentTransactionsTable() {
             <td>${time}</td>
             <td>${tx.nama_kasir || '-'}</td>
             <td>${formatIDR(sub)}</td>
-            <td>${formatIDR(taxSvc)}</td>
+            <td style="display: none;">${formatIDR(taxSvc)}</td>
             <td><strong>${formatIDR(total)}</strong></td>
             <td><span class="badge ${tx.metode_pembayaran === 'Cash' ? 'badge-success' : 'badge-warning'}">${tx.metode_pembayaran || '-'}</span></td>
             <td><span class="badge badge-success">Selesai</span></td>
@@ -922,8 +922,8 @@ function renderReportTable() {
     filtered.forEach(tx => {
         const txId   = `TX-${String(tx.id_transaksi).padStart(6,'0')}`;
         const total  = Number(tx.total_harga || 0);
-        const sub    = Math.round(total / 1.15);
-        const taxSvc = total - sub;
+        const sub    = total;
+        const taxSvc = 0;
         const dateStr = (tx.tanggal_transaksi || '').slice(0, 19).replace('T',' ');
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -931,7 +931,7 @@ function renderReportTable() {
             <td>${dateStr}</td>
             <td>${tx.nama_kasir || '-'}</td>
             <td>${formatIDR(sub)}</td>
-            <td>${formatIDR(taxSvc)}</td>
+            <td style="display: none;">${formatIDR(taxSvc)}</td>
             <td><strong>${formatIDR(total)}</strong></td>
             <td><span class="badge ${tx.metode_pembayaran === 'Cash' ? 'badge-success' : 'badge-warning'}">${tx.metode_pembayaran || '-'}</span></td>
             <td style="text-align:center">
@@ -950,8 +950,8 @@ window.viewTransactionDetail = async function(id) {
         const tx    = data.data;
         const items = tx.items || [];
         const sub   = items.reduce((s, i) => s + Number(i.subtotal || 0), 0);
-        const tax   = Math.round(sub * 0.10);
-        const svc   = Math.round(sub * 0.05);
+        const tax   = 0;
+        const svc   = 0;
         const txId  = `TX-${String(tx.id_transaksi).padStart(6,'0')}`;
         const dateStr = (tx.tanggal_transaksi || '').slice(0,19).replace('T',' ');
 
@@ -1581,19 +1581,17 @@ function exportReportExcel() {
         return mSearch && mStart && mEnd && mMethod;
     });
 
-    const headers = ["ID Transaksi", "Tanggal & Waktu", "Kasir", "Subtotal", "Pajak & Servis", "Total Akhir", "Metode Pembayaran", "Status"];
+    const headers = ["ID Transaksi", "Tanggal & Waktu", "Kasir", "Subtotal", "Total Akhir", "Metode Pembayaran", "Status"];
     const rows = filtered.map(tx => {
         const txId   = `TX-${String(tx.id_transaksi).padStart(6,'0')}`;
         const total  = Number(tx.total_harga || 0);
-        const sub    = Math.round(total / 1.15);
-        const taxSvc = total - sub;
+        const sub    = total;
         const dateStr = (tx.tanggal_transaksi || '').slice(0, 19).replace('T',' ');
         return [
             txId,
             dateStr,
             tx.nama_kasir || '-',
             formatIDR(sub),
-            formatIDR(taxSvc),
             formatIDR(total),
             tx.metode_pembayaran || '-',
             "Selesai"
@@ -1621,19 +1619,17 @@ function exportReportPdf() {
         return mSearch && mStart && mEnd && mMethod;
     });
 
-    const headers = ["ID Transaksi", "Tanggal & Waktu", "Kasir", "Subtotal", "Pajak & Servis", "Total Akhir", "Metode", "Status"];
+    const headers = ["ID Transaksi", "Tanggal & Waktu", "Kasir", "Subtotal", "Total Akhir", "Metode", "Status"];
     const rows = filtered.map(tx => {
         const txId   = `TX-${String(tx.id_transaksi).padStart(6,'0')}`;
         const total  = Number(tx.total_harga || 0);
-        const sub    = Math.round(total / 1.15);
-        const taxSvc = total - sub;
+        const sub    = total;
         const dateStr = (tx.tanggal_transaksi || '').slice(0, 19).replace('T',' ');
         return [
             txId,
             dateStr,
             tx.nama_kasir || '-',
             formatIDR(sub),
-            formatIDR(taxSvc),
             formatIDR(total),
             tx.metode_pembayaran || '-',
             "Selesai"
