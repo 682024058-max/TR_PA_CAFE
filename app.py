@@ -1048,7 +1048,17 @@ def manual_email_report():
 @app.route('/api/cron/daily-report', methods=['GET', 'POST'])
 def cron_daily_report():
     # Mengamankan endpoint agar hanya bisa dipanggil oleh server Vercel Cron
-    is_vercel_cron = request.headers.get("X-Vercel-Signature")
+    auth_header = request.headers.get("Authorization")
+    cron_secret = os.environ.get("CRON_SECRET")
+    
+    is_vercel_cron = False
+    if auth_header and cron_secret and auth_header == f"Bearer {cron_secret}":
+        is_vercel_cron = True
+    elif request.headers.get("X-Vercel-Signature"):
+        is_vercel_cron = True
+    elif request.headers.get("User-Agent") == "vercel-cron/1.0":
+        is_vercel_cron = True
+        
     if os.environ.get("VERCEL") == "1" and not is_vercel_cron:
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
