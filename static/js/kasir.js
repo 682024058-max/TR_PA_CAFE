@@ -835,48 +835,69 @@ function captureWebcamPhoto() {
     return canvas.toDataURL('image/jpeg', 0.85); // JPEG compression 85%
 }
 
+window.closeCameraModal = function() {
+    stopWebcam();
+    closeModal('camera-modal');
+};
+
 function initAttendanceInteractions() {
     // ── ABSEN MASUK ──
     document.getElementById('btn-clock-in')?.addEventListener('click', async () => {
         if (currentAttendance.status !== 'Belum Absen') return;
         if (!SESSION.nama) { showToast('Session tidak ditemukan, login ulang','danger'); return; }
 
-        const btn = document.getElementById('btn-clock-in');
-        const originalText = btn.innerHTML;
-        
-        const photo = captureWebcamPhoto();
-        if (!photo) {
-            showToast('Foto absensi wajib diambil! Pastikan izin kamera aktif.', 'danger');
-            return;
+        // Buka modal kamera
+        openModal('camera-modal');
+        const titleEl = document.getElementById('camera-modal-title');
+        if (titleEl) {
+            titleEl.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Foto Absen Masuk';
         }
+        
+        // Mulai streaming
+        await startWebcam();
 
-        btn.setAttribute('disabled', 'true');
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+        const captureBtn = document.getElementById('btn-capture-absensi');
+        if (captureBtn) {
+            // Clone tombol jepret untuk membersihkan event listener sebelumnya
+            const newCaptureBtn = captureBtn.cloneNode(true);
+            captureBtn.parentNode.replaceChild(newCaptureBtn, captureBtn);
 
-        try {
-            const res  = await fetch(`${API_BASE}/absensi/masuk`, {
-                method : 'POST',
-                headers: apiHeaders(),
-                // Kirim nama_kasir dan foto
-                body   : JSON.stringify({ nama_kasir: SESSION.nama, foto: photo })
+            newCaptureBtn.addEventListener('click', async () => {
+                const photo = captureWebcamPhoto();
+                if (!photo) {
+                    showToast('Foto absensi gagal diambil! Pastikan izin kamera aktif.', 'danger');
+                    return;
+                }
+
+                newCaptureBtn.setAttribute('disabled', 'true');
+                newCaptureBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+
+                try {
+                    const res  = await fetch(`${API_BASE}/absensi/masuk`, {
+                        method : 'POST',
+                        headers: apiHeaders(),
+                        body   : JSON.stringify({ nama_kasir: SESSION.nama, foto: photo })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        currentAttendance.status     = 'Aktif Bekerja';
+                        currentAttendance.clockIn    = new Date().toLocaleTimeString('id-ID');
+                        currentAttendance.activeDate = new Date().toISOString().slice(0, 10);
+                        currentAttendance.id_absensi = data.id_absensi;
+                        updateAbsensiUI();
+                        showToast('Absen Masuk berhasil dicatat!','success');
+                        loadRiwayatAbsensi();
+                        closeCameraModal();
+                    } else {
+                        showToast(data.message || 'Gagal absen masuk','danger');
+                    }
+                } catch (e) { 
+                    showToast('Gagal terhubung ke server!','danger'); 
+                } finally {
+                    newCaptureBtn.removeAttribute('disabled');
+                    newCaptureBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Jepret & Kirim';
+                }
             });
-            const data = await res.json();
-            if (data.status === 'success') {
-                currentAttendance.status     = 'Aktif Bekerja';
-                currentAttendance.clockIn    = new Date().toLocaleTimeString('id-ID');
-                currentAttendance.activeDate = new Date().toISOString().slice(0, 10);
-                currentAttendance.id_absensi = data.id_absensi;
-                updateAbsensiUI();
-                showToast('Absen Masuk berhasil dicatat!','success');
-                loadRiwayatAbsensi();
-            } else {
-                showToast(data.message || 'Gagal absen masuk','danger');
-            }
-        } catch (e) { 
-            showToast('Gagal terhubung ke server!','danger'); 
-        } finally {
-            btn.removeAttribute('disabled');
-            btn.innerHTML = originalText;
         }
     });
 
@@ -888,39 +909,56 @@ function initAttendanceInteractions() {
             return;
         }
 
-        const btn = document.getElementById('btn-clock-out');
-        const originalText = btn.innerHTML;
-
-        const photo = captureWebcamPhoto();
-        if (!photo) {
-            showToast('Foto absensi wajib diambil! Pastikan izin kamera aktif.', 'danger');
-            return;
+        // Buka modal kamera
+        openModal('camera-modal');
+        const titleEl = document.getElementById('camera-modal-title');
+        if (titleEl) {
+            titleEl.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Foto Absen Pulang';
         }
+        
+        // Mulai streaming
+        await startWebcam();
 
-        btn.setAttribute('disabled', 'true');
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+        const captureBtn = document.getElementById('btn-capture-absensi');
+        if (captureBtn) {
+            // Clone tombol jepret untuk membersihkan event listener sebelumnya
+            const newCaptureBtn = captureBtn.cloneNode(true);
+            captureBtn.parentNode.replaceChild(newCaptureBtn, captureBtn);
 
-        try {
-            const res  = await fetch(`${API_BASE}/absensi/keluar`, {
-                method : 'PUT',
-                headers: apiHeaders(),
-                body   : JSON.stringify({ foto: photo })
+            newCaptureBtn.addEventListener('click', async () => {
+                const photo = captureWebcamPhoto();
+                if (!photo) {
+                    showToast('Foto absensi gagal diambil! Pastikan izin kamera aktif.', 'danger');
+                    return;
+                }
+
+                newCaptureBtn.setAttribute('disabled', 'true');
+                newCaptureBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+
+                try {
+                    const res  = await fetch(`${API_BASE}/absensi/keluar`, {
+                        method : 'PUT',
+                        headers: apiHeaders(),
+                        body   : JSON.stringify({ foto: photo })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        currentAttendance.clockOut = new Date().toLocaleTimeString('id-ID');
+                        currentAttendance.status   = 'Selesai Shift';
+                        updateAbsensiUI();
+                        showToast('Absen Pulang dicatat. Selamat beristirahat!','success');
+                        loadRiwayatAbsensi();
+                        closeCameraModal();
+                    } else {
+                        showToast(data.message || 'Gagal absen keluar','danger');
+                    }
+                } catch (e) { 
+                    showToast('Gagal terhubung ke server!','danger'); 
+                } finally {
+                    newCaptureBtn.removeAttribute('disabled');
+                    newCaptureBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Jepret & Kirim';
+                }
             });
-            const data = await res.json();
-            if (data.status === 'success') {
-                currentAttendance.clockOut = new Date().toLocaleTimeString('id-ID');
-                currentAttendance.status   = 'Selesai Shift';
-                updateAbsensiUI();
-                showToast('Absen Pulang dicatat. Selamat beristirahat!','success');
-                loadRiwayatAbsensi();
-            } else {
-                showToast(data.message || 'Gagal absen keluar','danger');
-            }
-        } catch (e) { 
-            showToast('Gagal terhubung ke server!','danger'); 
-        } finally {
-            btn.removeAttribute('disabled');
-            btn.innerHTML = originalText;
         }
     });
 }
@@ -1159,12 +1197,7 @@ function initNavigationRouter() {
                 pageTitle.innerText = target.charAt(0).toUpperCase()+target.slice(1).replace('-',' ');
             if (target === 'dashboard') loadTransaksiHariIni();
             if (target === 'riwayat')   loadRiwayatTransaksi('');
-            if (target === 'absensi') {
-                loadRiwayatAbsensi();
-                startWebcam();
-            } else {
-                stopWebcam();
-            }
+            if (target === 'absensi')   loadRiwayatAbsensi();
             if (target === 'transaksi') applyMenuFilter();
         });
     });
