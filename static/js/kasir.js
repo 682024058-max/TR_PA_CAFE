@@ -830,7 +830,7 @@ function captureWebcamPhoto() {
     context.strokeText(text1, 20, 450);
     context.fillText(text1, 20, 450);
     
-    return canvas.toDataURL('image/jpeg', 0.70); // Optimized compression (cuts file size by half, making upload extremely fast)
+    return canvas.toDataURL('image/jpeg', 0.85); // Reverted compression quality back to 85%
 }
 
 window.closeCameraModal = function() {
