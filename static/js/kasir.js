@@ -806,49 +806,7 @@ function stopWebcam() {
     if (video) video.srcObject = null;
 }
 
-async function getGeocodedAddress() {
-    return new Promise((resolve) => {
-        if (!navigator.geolocation) {
-            console.warn("Geolocation tidak didukung oleh browser.");
-            resolve(null);
-            return;
-        }
-        
-        navigator.geolocation.getCurrentPosition(
-            async (position) => {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                let addressText = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
-                try {
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`, {
-                        headers: { 'Accept-Language': 'id' }
-                    });
-                    const data = await res.json();
-                    if (data && data.address) {
-                        const addr = data.address;
-                        const road = addr.road || addr.suburb || addr.neighbourhood || '';
-                        const city = addr.city || addr.town || addr.regency || '';
-                        if (road && city) {
-                            addressText = `${road}, ${city}`;
-                        } else if (data.display_name) {
-                            addressText = data.display_name.split(',').slice(0, 3).join(',').trim();
-                        }
-                    }
-                } catch (e) {
-                    console.error("Gagal melakukan reverse geocoding:", e);
-                }
-                resolve(addressText);
-            },
-            (err) => {
-                console.warn("Gagal mendapatkan koordinat GPS:", err);
-                resolve(null);
-            },
-            { enableHighAccuracy: true, timeout: 5000 }
-        );
-    });
-}
-
-function captureWebcamPhoto(addressText) {
+function captureWebcamPhoto() {
     const video = document.getElementById('webcam-video');
     const canvas = document.getElementById('webcam-canvas');
     if (!video || !canvas || !webcamStream) return null;
@@ -869,17 +827,10 @@ function captureWebcamPhoto(addressText) {
     const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
     const text1 = `KOPI SIBEI - ${timestamp}`;
     
-    context.strokeText(text1, 20, 415);
-    context.fillText(text1, 20, 415);
+    context.strokeText(text1, 20, 450);
+    context.fillText(text1, 20, 450);
     
-    if (addressText) {
-        context.font = "bold 14px Arial, sans-serif";
-        const text2 = `Lokasi: ${addressText}`;
-        context.strokeText(text2, 20, 445);
-        context.fillText(text2, 20, 445);
-    }
-    
-    return canvas.toDataURL('image/jpeg', 0.85); // JPEG compression 85%
+    return canvas.toDataURL('image/jpeg', 0.70); // Optimized compression (cuts file size by half, making upload extremely fast)
 }
 
 window.closeCameraModal = function() {
@@ -911,14 +862,9 @@ function initAttendanceInteractions() {
 
             newCaptureBtn.addEventListener('click', async () => {
                 newCaptureBtn.setAttribute('disabled', 'true');
-                newCaptureBtn.innerHTML = '<i class="fa-solid fa-location-dot fa-bounce"></i> Mencari Lokasi...';
-
-                // Dapatkan alamat koordinat secara dinamis
-                const addressText = await getGeocodedAddress();
-
                 newCaptureBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
 
-                const photo = captureWebcamPhoto(addressText);
+                const photo = captureWebcamPhoto();
                 if (!photo) {
                     showToast('Foto absensi gagal diambil! Pastikan izin kamera aktif.', 'danger');
                     newCaptureBtn.removeAttribute('disabled');
@@ -981,14 +927,9 @@ function initAttendanceInteractions() {
 
             newCaptureBtn.addEventListener('click', async () => {
                 newCaptureBtn.setAttribute('disabled', 'true');
-                newCaptureBtn.innerHTML = '<i class="fa-solid fa-location-dot fa-bounce"></i> Mencari Lokasi...';
-
-                // Dapatkan alamat koordinat secara dinamis
-                const addressText = await getGeocodedAddress();
-
                 newCaptureBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
 
-                const photo = captureWebcamPhoto(addressText);
+                const photo = captureWebcamPhoto();
                 if (!photo) {
                     showToast('Foto absensi gagal diambil! Pastikan izin kamera aktif.', 'danger');
                     newCaptureBtn.removeAttribute('disabled');
