@@ -835,6 +835,35 @@ window.viewAbsensiDetail = function(id) {
     document.getElementById("abs-detail-in").textContent     = att.jam_masuk  ? String(att.jam_masuk).slice(0,8)  : '-';
     document.getElementById("abs-detail-out").textContent    = att.jam_keluar ? String(att.jam_keluar).slice(0,8) : '-';
     document.getElementById("abs-detail-status").innerHTML   = `<span class="badge ${att.status === 'Hadir' ? 'badge-success' : 'badge-warning'}">${att.status || '-'}</span>`;
+
+    const imgIn  = document.getElementById("abs-detail-photo-in");
+    const placeholderIn = document.getElementById("abs-detail-photo-in-placeholder");
+    if (imgIn && placeholderIn) {
+        if (att.foto_masuk) {
+            imgIn.src = att.foto_masuk;
+            imgIn.style.display = "block";
+            placeholderIn.style.display = "none";
+        } else {
+            imgIn.src = "";
+            imgIn.style.display = "none";
+            placeholderIn.style.display = "block";
+        }
+    }
+
+    const imgOut = document.getElementById("abs-detail-photo-out");
+    const placeholderOut = document.getElementById("abs-detail-photo-out-placeholder");
+    if (imgOut && placeholderOut) {
+        if (att.foto_keluar) {
+            imgOut.src = att.foto_keluar;
+            imgOut.style.display = "block";
+            placeholderOut.style.display = "none";
+        } else {
+            imgOut.src = "";
+            imgOut.style.display = "none";
+            placeholderOut.style.display = "block";
+        }
+    }
+
     openModal("absensi-detail-modal");
 }
 

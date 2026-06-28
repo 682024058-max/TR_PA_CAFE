@@ -39,6 +39,16 @@ if os.path.exists(env_path):
     except Exception as e:
         print("Gagal membaca file .env secara manual:", e)
 
+# ── Konfigurasi Cloudinary ────────────────────────────────────
+import cloudinary
+import cloudinary.uploader
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+    secure=True
+)
+
 # Parse DATABASE_URL if present, otherwise read individual variables
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL:
@@ -615,6 +625,15 @@ def absensi_masuk():
     if not nama_kasir:
         return jsonify({"status":"error","message":"nama_kasir wajib diisi!"}), 400
 
+    foto = data.get('foto')
+    foto_url = None
+    if foto:
+        try:
+            res = cloudinary.uploader.upload(foto, folder="absensi")
+            foto_url = res.get("secure_url")
+        except Exception as e:
+            print("Gagal upload foto masuk ke Cloudinary:", e)
+
     conn = None
     try:
         conn = get_db()
@@ -626,9 +645,9 @@ def absensi_masuk():
             if cur.fetchone():
                 return jsonify({"status":"error","message":"Anda sudah absen masuk hari ini."}), 409
             cur.execute(
-                "INSERT INTO absensi (date, nama_kasir, jam_masuk, status) "
-                "VALUES (CURDATE(), %s, NOW(), 'Hadir')",
-                (nama_kasir,)
+                "INSERT INTO absensi (date, nama_kasir, jam_masuk, status, foto_masuk) "
+                "VALUES (CURDATE(), %s, NOW(), 'Hadir', %s)",
+                (nama_kasir, foto_url)
             )
             id_absensi = cur.lastrowid
         return jsonify({"status":"success","message":"Absen masuk berhasil!","id_absensi":id_absensi}), 201
@@ -640,12 +659,21 @@ def absensi_masuk():
 @app.route('/api/absensi/keluar', methods=['PUT'])
 @role_required('kasir','manager')
 def absensi_keluar():
+    data = request.get_json() or {}
     nama_kasir = request.headers.get("X-User-Name","").strip()
     if not nama_kasir:
-        data = request.get_json() or {}
         nama_kasir = data.get('nama_kasir','').strip()
     if not nama_kasir:
-        return jsonify({"status":"error","message":"nama_kasir diperlukan di header X-User-Name."}), 400
+        return jsonify({"status":"error","message":"nama_kasir diperlukan."}), 400
+
+    foto = data.get('foto')
+    foto_url = None
+    if foto:
+        try:
+            res = cloudinary.uploader.upload(foto, folder="absensi")
+            foto_url = res.get("secure_url")
+        except Exception as e:
+            print("Gagal upload foto keluar ke Cloudinary:", e)
 
     conn = None
     try:
@@ -654,9 +682,10 @@ def absensi_keluar():
             cur.execute(
                 "UPDATE absensi "
                 "SET jam_keluar=NOW(), "
-                "    total_jam=ROUND(TIMESTAMPDIFF(MINUTE, jam_masuk, NOW())/60.0, 2) "
+                "    total_jam=ROUND(TIMESTAMPDIFF(MINUTE, jam_masuk, NOW())/60.0, 2), "
+                "    foto_keluar=%s "
                 "WHERE nama_kasir=%s AND date=CURDATE() AND jam_keluar IS NULL",
-                (nama_kasir,)
+                (foto_url, nama_kasir)
             )
             if cur.rowcount == 0:
                 return jsonify({"status":"error",

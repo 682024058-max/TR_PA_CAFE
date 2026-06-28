@@ -321,11 +321,11 @@
                         <span>Subtotal:</span>
                         <span id="tx-detail-subtotal">Rp 0</span>
                     </div>
-                    <div class="total-line">
+                    <div class="total-line" style="display: none;">
                         <span>Pajak (PPN 10%):</span>
                         <span id="tx-detail-tax">Rp 0</span>
                     </div>
-                    <div class="total-line">
+                    <div class="total-line" style="display: none;">
                         <span>Service Charge (5%):</span>
                         <span id="tx-detail-service">Rp 0</span>
                     </div>
@@ -367,6 +367,20 @@
                     <div class="info-block mt-12">
                         <label>Jam Pulang</label>
                         <h4 id="abs-detail-out">16:00:00</h4>
+                    </div>
+                    <div class="info-block mt-12">
+                        <label>Foto Masuk</label>
+                        <div id="abs-detail-photo-in-container" style="margin-top: 8px;">
+                            <img id="abs-detail-photo-in" src="" style="max-width: 100%; max-height: 120px; border-radius: 6px; border: 1px solid #e1dcd6; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" alt="Foto Masuk">
+                            <span id="abs-detail-photo-in-placeholder" style="color: #8e7c77; font-style: italic; font-size: 13px;">Tidak ada foto</span>
+                        </div>
+                    </div>
+                    <div class="info-block mt-12">
+                        <label>Foto Pulang</label>
+                        <div id="abs-detail-photo-out-container" style="margin-top: 8px;">
+                            <img id="abs-detail-photo-out" src="" style="max-width: 100%; max-height: 120px; border-radius: 6px; border: 1px solid #e1dcd6; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" alt="Foto Pulang">
+                            <span id="abs-detail-photo-out-placeholder" style="color: #8e7c77; font-style: italic; font-size: 13px;">Tidak ada foto</span>
+                        </div>
                     </div>
                     <div class="info-block mt-12 span-2">
                         <label>Status Kehadiran</label>

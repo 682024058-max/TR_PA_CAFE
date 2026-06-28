@@ -771,18 +771,94 @@ async function loadRiwayatAbsensi() {
     } catch (e) { console.error('Gagal load riwayat absensi:', e); }
 }
 
+let webcamStream = null;
+
+async function startWebcam() {
+    const video = document.getElementById('webcam-video');
+    const loading = document.getElementById('camera-loading-placeholder');
+    const errorEl = document.getElementById('camera-error-placeholder');
+    
+    if (!video) return;
+    
+    if (loading) loading.style.display = 'flex';
+    if (errorEl) errorEl.style.display = 'none';
+    
+    try {
+        webcamStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: 'user' },
+            audio: false
+        });
+        video.srcObject = webcamStream;
+        if (loading) loading.style.display = 'none';
+    } catch (err) {
+        console.error('Error accessing webcam:', err);
+        if (loading) loading.style.display = 'none';
+        if (errorEl) errorEl.style.display = 'flex';
+    }
+}
+
+function stopWebcam() {
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+    }
+    const video = document.getElementById('webcam-video');
+    if (video) video.srcObject = null;
+}
+
+function captureWebcamPhoto() {
+    const video = document.getElementById('webcam-video');
+    const canvas = document.getElementById('webcam-canvas');
+    if (!video || !canvas || !webcamStream) return null;
+    
+    const context = canvas.getContext('2d');
+    canvas.width = 640;
+    canvas.height = 480;
+    
+    // Draw unmirrored frame to canvas
+    context.drawImage(video, 0, 0, 640, 480);
+    
+    // Draw simple timestamp overlay on photo
+    context.font = "bold 18px Arial, sans-serif";
+    context.fillStyle = "rgba(255, 255, 255, 0.95)";
+    context.strokeStyle = "rgba(0, 0, 0, 0.8)";
+    context.lineWidth = 4;
+    
+    const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+    const text = `KOPI SIBEI - ${timestamp}`;
+    const x = 20;
+    const y = 450;
+    
+    context.strokeText(text, x, y);
+    context.fillText(text, x, y);
+    
+    return canvas.toDataURL('image/jpeg', 0.85); // JPEG compression 85%
+}
+
 function initAttendanceInteractions() {
     // ── ABSEN MASUK ──
     document.getElementById('btn-clock-in')?.addEventListener('click', async () => {
         if (currentAttendance.status !== 'Belum Absen') return;
         if (!SESSION.nama) { showToast('Session tidak ditemukan, login ulang','danger'); return; }
 
+        const btn = document.getElementById('btn-clock-in');
+        const originalText = btn.innerHTML;
+        
+        const photo = captureWebcamPhoto();
+        if (!photo) {
+            showToast('Foto absensi wajib diambil! Pastikan izin kamera aktif.', 'danger');
+            return;
+        }
+
+        btn.setAttribute('disabled', 'true');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
         try {
             const res  = await fetch(`${API_BASE}/absensi/masuk`, {
                 method : 'POST',
                 headers: apiHeaders(),
-                // Kirim nama_kasir — karena absensi tidak simpan id_user
-                body   : JSON.stringify({ nama_kasir: SESSION.nama })
+                // Kirim nama_kasir dan foto
+                body   : JSON.stringify({ nama_kasir: SESSION.nama, foto: photo })
             });
             const data = await res.json();
             if (data.status === 'success') {
@@ -796,7 +872,12 @@ function initAttendanceInteractions() {
             } else {
                 showToast(data.message || 'Gagal absen masuk','danger');
             }
-        } catch (e) { showToast('Gagal terhubung ke server!','danger'); }
+        } catch (e) { 
+            showToast('Gagal terhubung ke server!','danger'); 
+        } finally {
+            btn.removeAttribute('disabled');
+            btn.innerHTML = originalText;
+        }
     });
 
     // ── ABSEN KELUAR ──
@@ -807,11 +888,23 @@ function initAttendanceInteractions() {
             return;
         }
 
+        const btn = document.getElementById('btn-clock-out');
+        const originalText = btn.innerHTML;
+
+        const photo = captureWebcamPhoto();
+        if (!photo) {
+            showToast('Foto absensi wajib diambil! Pastikan izin kamera aktif.', 'danger');
+            return;
+        }
+
+        btn.setAttribute('disabled', 'true');
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+
         try {
-            // Endpoint tidak pakai id_user, identifikasi dari X-User-Name header
             const res  = await fetch(`${API_BASE}/absensi/keluar`, {
                 method : 'PUT',
-                headers: apiHeaders()
+                headers: apiHeaders(),
+                body   : JSON.stringify({ foto: photo })
             });
             const data = await res.json();
             if (data.status === 'success') {
@@ -823,7 +916,12 @@ function initAttendanceInteractions() {
             } else {
                 showToast(data.message || 'Gagal absen keluar','danger');
             }
-        } catch (e) { showToast('Gagal terhubung ke server!','danger'); }
+        } catch (e) { 
+            showToast('Gagal terhubung ke server!','danger'); 
+        } finally {
+            btn.removeAttribute('disabled');
+            btn.innerHTML = originalText;
+        }
     });
 }
 
@@ -1061,7 +1159,12 @@ function initNavigationRouter() {
                 pageTitle.innerText = target.charAt(0).toUpperCase()+target.slice(1).replace('-',' ');
             if (target === 'dashboard') loadTransaksiHariIni();
             if (target === 'riwayat')   loadRiwayatTransaksi('');
-            if (target === 'absensi')   loadRiwayatAbsensi();
+            if (target === 'absensi') {
+                loadRiwayatAbsensi();
+                startWebcam();
+            } else {
+                stopWebcam();
+            }
             if (target === 'transaksi') applyMenuFilter();
         });
     });
