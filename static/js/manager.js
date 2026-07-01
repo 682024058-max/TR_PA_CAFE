@@ -568,9 +568,8 @@ function inisialisasiCRUDKategori() {
 async function tanganiKirimKategori(e) {
     if (e) e.preventDefault();
     const nameInput = document.getElementById("category-form-name");
-    const iconInput = document.getElementById("category-form-icon");
     const name = nameInput ? nameInput.value.trim() : "";
-    const icon = iconInput ? iconInput.value.trim() : "fa-tag";
+    const icon = "fa-tag";
     
     if (!name) {
         tampilkanToast("Nama kategori wajib diisi!", "warning");
@@ -614,7 +613,6 @@ function tampilkanTabelKategori() {
         tr.innerHTML = `
             <td><code>CAT-${String(idx+1).padStart(3,'0')}</code></td>
             <td><strong>${cat.name}</strong></td>
-            <td><code><i class="fa-solid ${cat.icon}"></i> ${cat.icon}</code></td>
             <td style="text-align:center"><span class="badge badge-success">Aktif</span></td>
         `;
         tbody.appendChild(tr);
@@ -1166,12 +1164,16 @@ function tampilkanTabelPenggajian() {
         const [yr, mo] = p.period.split("-");
         const periodLabel = `${months[parseInt(mo)-1]} ${yr}`;
         const tr = document.createElement("tr");
+        const statusBadge = p.buktiTF 
+            ? `<span class="badge badge-success" style="cursor:pointer;" onclick="toggleStatusBayar(${p.id})" title="Klik untuk ubah status"><i class="fa-solid fa-circle-check"></i> Sudah Dibayar</span>`
+            : `<span class="badge badge-warning" style="cursor:pointer;" onclick="toggleStatusBayar(${p.id})" title="Klik untuk ubah status"><i class="fa-solid fa-clock"></i> Belum Dibayar</span>`;
         tr.innerHTML = `
             <td><strong>${p.cashier}</strong></td>
             <td>${periodLabel}</td>
             <td>${formatRupiah(p.ratePerShift || 75000)}</td>
             <td style="text-align:center"><strong>${p.totalShifts || 0}</strong> shift</td>
             <td><strong>${formatRupiah(p.totalSalary)}</strong></td>
+            <td style="text-align:center">${statusBadge}</td>
             <td style="text-align:center">
                 <button class="btn-secondary"  onclick="editPenggajian(${p.id})"     style="padding:6px 10px;font-size:11px;margin-right:4px"><i class="fa-solid fa-pencil"></i> Edit</button>
                 <button class="btn-slip-send"  onclick="openSlipGaji(${p.id})"   style="margin-right:4px"><i class="fa-solid fa-envelope"></i> Kirim</button>
@@ -1206,6 +1208,30 @@ window.deletePayroll = async function(id) {
         tampilkanTabelPenggajian();
     } catch(e) {
         tampilkanToast("Gagal menghapus data penggajian: " + e.message, "danger");
+    }
+}
+
+window.toggleStatusBayar = async function(id) {
+    const p = PAYROLL.find(x => x.id === id);
+    if (!p) return;
+    const isPaid = !!p.buktiTF;
+    try {
+        if (isPaid) {
+            // Ubah ke Belum Dibayar (hapus bukti)
+            await ambilDataApi(`${API_BASE}/payroll/${id}/bukti`, { method: 'DELETE' });
+            tampilkanToast("Status penggajian diubah menjadi Belum Dibayar.", "success");
+        } else {
+            // Ubah ke Sudah Dibayar (isi dengan penanda LUNAS)
+            await ambilDataApi(`${API_BASE}/payroll/${id}/upload-bukti`, {
+                method: 'POST',
+                body: JSON.stringify({ buktiTF: "LUNAS" })
+            });
+            tampilkanToast("Status penggajian diubah menjadi Sudah Dibayar (Lunas).", "success");
+        }
+        await muatPenggajian();
+        tampilkanTabelPenggajian();
+    } catch (e) {
+        tampilkanToast("Gagal mengubah status pembayaran: " + e.message, "danger");
     }
 }
 
