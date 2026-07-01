@@ -335,12 +335,12 @@ def get_products():
             kat = request.args.get('kategori')
             if kat:
                 cur.execute(
-                    "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, icon, warna "
+                    "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, foto, warna "
                     "FROM products WHERE kategori=%s ORDER BY id_products", (kat,)
                 )
             else:
                 cur.execute(
-                    "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, icon, warna "
+                    "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, foto, warna "
                     "FROM products ORDER BY id_products"
                 )
             rows = cur.fetchall()
@@ -357,7 +357,7 @@ def get_product_detail(id_product):
         conn = get_db()
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, icon, warna "
+                "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, foto, warna "
                 "FROM products WHERE id_products=%s", (id_product,)
             )
             row = cur.fetchone()
@@ -376,14 +376,26 @@ def add_product():
     for f in ['nama_product','harga','kategori']:
         if data.get(f) is None:
             return jsonify({"status":"error","message":f"Field '{f}' wajib diisi!"}), 400
+    
+    foto = data.get('foto')
+    foto_url = None
+    if foto:
+        if foto.startswith("data:image/"):
+            try:
+                res = cloudinary.uploader.upload(foto, folder="products")
+                foto_url = res.get("secure_url")
+            except Exception as e:
+                print("Gagal upload foto menu ke Cloudinary:", e)
+        else:
+            foto_url = foto
+
     conn = None
     try:
         conn = get_db()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO products (nama_produk, kategori, harga, icon, warna) VALUES (%s,%s,%s,%s,%s)",
-                (data['nama_product'], data['kategori'], data['harga'],
-                 data.get('icon','fa-mug-hot'), data.get('warna','#4e3629'))
+                "INSERT INTO products (nama_produk, kategori, harga, foto, warna) VALUES (%s,%s,%s,%s,%s)",
+                (data['nama_product'], data['kategori'], data['harga'], foto_url, data.get('warna','#4e3629'))
             )
         return jsonify({"status":"success","message":"Produk berhasil ditambahkan."}), 201
     except Exception as e:
@@ -395,13 +407,22 @@ def add_product():
 @role_required('manager')
 def update_product(id_product):
     data = request.get_json()
+    
+    foto = data.get('foto')
+    if foto and foto.startswith("data:image/"):
+        try:
+            res = cloudinary.uploader.upload(foto, folder="products")
+            data['foto'] = res.get("secure_url")
+        except Exception as e:
+            print("Gagal upload foto menu ke Cloudinary:", e)
+
     conn = None
     try:
         conn = get_db()
         with conn.cursor() as cur:
             fields, values = [], []
-            for col in ['nama_product','kategori','harga','icon','warna']:
-                if col in data and data[col] is not None:
+            for col in ['nama_product','kategori','harga','foto','warna']:
+                if col in data:
                     db_col = 'nama_produk' if col == 'nama_product' else col
                     fields.append(f"{db_col}=%s"); values.append(data[col])
             if not fields:

@@ -331,7 +331,7 @@ async function loadMenuItems() {
             name     : p.nama_product,
             category : p.kategori,
             price    : Number(p.harga),
-            icon     : p.icon  || 'fa-mug-hot',
+            foto     : p.foto,
             warna    : p.warna || '#4e3629'
         }));
         populateMenuCategoryFilter();
@@ -461,11 +461,14 @@ function renderMenuTable(items) {
     items.forEach(item => {
         const catObj   = CATEGORIES.find(c => c.id === item.category);
         const catLabel = catObj ? catObj.name : item.category;
+        const photoHtml = item.foto 
+            ? `<img src="${item.foto}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" alt="${item.name}">` 
+            : `<i class="fa-solid fa-mug-hot"></i>`;
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>
-                <div style="width:48px;height:48px;background:rgba(78,54,41,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#4e3629;">
-                    <i class="fa-solid ${item.icon || 'fa-mug-hot'}"></i>
+                <div style="width:48px;height:48px;background:rgba(78,54,41,0.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;color:#4e3629;overflow:hidden;">
+                    ${photoHtml}
                 </div>
             </td>
             <td><strong>${item.name}</strong></td>
@@ -490,6 +493,14 @@ window.editMenu = function(id) {
     document.getElementById("menu-form-desc").value  = "";
     document.getElementById("menu-form-price").value = item.price;
     resetMenuPhotoArea();
+    if (item.foto) {
+        const preview = document.getElementById("menu-image-preview-element");
+        const placeholder = document.getElementById("menu-photo-placeholder");
+        const imgInput = document.getElementById("menu-form-image");
+        if (preview) { preview.src = item.foto; preview.classList.remove("hidden"); }
+        if (placeholder) placeholder.style.display = "none";
+        if (imgInput) imgInput.value = item.foto;
+    }
     document.getElementById("menu-modal-title").textContent = "Edit Menu";
     openModal("menu-modal");
 }
@@ -511,12 +522,13 @@ async function handleMenuSubmit(e) {
     const name     = document.getElementById("menu-form-name").value.trim();
     const category = document.getElementById("menu-form-category").value;
     const price    = parseInt(document.getElementById("menu-form-price").value);
+    const foto     = document.getElementById("menu-form-image").value || "";
 
     if (!name || !category || !price) {
         showToast("Nama, kategori, dan harga wajib diisi!", "warning"); return;
     }
 
-    const payload = { nama_product: name, kategori: category, harga: price, icon: 'fa-mug-hot', warna: '#4e3629' };
+    const payload = { nama_product: name, kategori: category, harga: price, foto: foto, warna: '#4e3629' };
 
     try {
         if (idVal) {

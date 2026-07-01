@@ -146,7 +146,7 @@ async function loadProducts() {
             price        : Number(p.harga),
             category     : p.kategori,                          // string enum: coffee, non-coffee, snack, dessert
             nama_kategori: KATEGORI_LABEL[p.kategori] || p.kategori,
-            icon         : p.icon  || 'fa-mug-hot',            // Font Awesome class
+            foto         : p.foto,
             warna        : p.warna || '#4e3629'
         }));
 
@@ -185,11 +185,14 @@ function renderPOSMenu(items) {
         const card = document.createElement('div');
         card.className = 'menu-card';
 
-        // icon = nama class FA (e.g. "fa-mug-hot"), bukan URL gambar
+        // Render photo if exists, otherwise fallback to category default icon
+        const photoHtml = item.foto 
+            ? `<img src="${item.foto}" style="width: 100%; height: 100%; object-fit: cover;" alt="${item.name}">` 
+            : `<i class="fa-solid fa-mug-hot" style="font-size:2.4rem; color:${item.warna}"></i>`;
+
         card.innerHTML = `
-            <div class="menu-card-img-wrapper" style="background:${item.warna}1a">
-                <i class="fa-solid ${item.icon}"
-                   style="font-size:2.4rem; color:${item.warna}"></i>
+            <div class="menu-card-img-wrapper" style="background:${item.warna}1a; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                ${photoHtml}
             </div>
             <div class="menu-card-category">${item.nama_kategori}</div>
             <h4 class="menu-card-name">${item.name}</h4>
