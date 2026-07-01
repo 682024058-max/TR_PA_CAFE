@@ -627,6 +627,21 @@ body {
     margin-bottom: 18px;
 }
 
+.pos-filter-bar .search-box {
+    position: relative;
+    width: 100%;
+}
+
+.pos-filter-bar .search-box i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    font-size: 16px;
+    pointer-events: none;
+}
+
 .pos-filter-bar .search-box input {
     width: 100%;
     padding: 14px 16px 14px 48px;
