@@ -1,0 +1,81 @@
+/* Compact Filter Styles */
+.riwayat-filter-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: flex-end;
+    padding: 10px 0;
+}
+
+.riwayat-filter-header .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.riwayat-filter-header label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.riwayat-filter-header input[type="text"],
+.riwayat-filter-header input[type="date"],
+.riwayat-filter-header select {
+    padding: 6px 10px;
+    font-size: 13px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    height: 32px;
+    box-sizing: border-box;
+    background-color: #fafafa;
+}
+
+.riwayat-filter-header input:focus,
+.riwayat-filter-header select:focus {
+    outline: none;
+    border-color: #4CAF50;
+    background-color: #fff;
+}
+
+.search-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-box i {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #888;
+}
+
+.search-box input {
+    width: 100%;
+    padding-left: 30px;
+}
+
+.filter-group:not(.search-group) {
+    flex: 0 0 140px;
+}
+
+.btn-reset-filters {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    border-radius: 6px !important;
+    cursor: pointer;
+    white-space: nowrap;
+}
