@@ -1,13 +1,13 @@
 
 document.addEventListener("DOMContentLoaded", () => {
-    initPasswordToggler();
+    inisialisasiPengubahSandi();
     
-    disableBrowserZooming();
+    nonaktifkanZoomBrowser();
     
-    initInputFocusListeners();
+    inisialisasiPendengarFokusInput();
 });
 
-function initPasswordToggler() {
+function inisialisasiPengubahSandi() {
     const toggleBtn = document.getElementById("btn-toggle-password");
     const passwordInput = document.getElementById("password");
     const eyeIcon = document.getElementById("password-eye-icon");
@@ -32,7 +32,7 @@ function initPasswordToggler() {
 }
 
 
-window.handleLoginSubmit = function(event) {
+window.tanganiKirimLogin = function(event) {
     event.preventDefault();
     
     const usernameInput = document.getElementById("username");
@@ -58,8 +58,8 @@ window.handleLoginSubmit = function(event) {
     }
     
     if (hasValidationError) {
-        showToast("Username atau Password tidak boleh kosong!", "warning");
-        triggerCardShake(cardNode);
+        tampilkanToast("Username atau Password tidak boleh kosong!", "warning");
+        picuGetarKartu(cardNode);
         return;
     }
     
@@ -87,7 +87,7 @@ window.handleLoginSubmit = function(event) {
     })
 .then(result => {
         // LOGIN BERHASIL: Tampilkan notifikasi toast sukses
-        showToast(`Login berhasil! Selamat bekerja, ${result.user.nama}.`, "success");
+        tampilkanToast(`Login berhasil! Selamat bekerja, ${result.user.nama}.`, "success");
         
         // Handle remember me state mockup dengan AMAN
         const rememberMeElement = document.getElementById("remember-me");
@@ -126,14 +126,14 @@ window.handleLoginSubmit = function(event) {
         passwordInput.classList.add("input-error");
         
         const errorMsg = err.message || "Gagal menghubungkan ke server Python (Koneksi Ditolak). Pastikan app.py Anda aktif!";
-        showToast(errorMsg, "danger");
-        triggerCardShake(cardNode);
+        tampilkanToast(errorMsg, "danger");
+        picuGetarKartu(cardNode);
         passwordInput.focus();
     });
 };
 
 
-function triggerCardShake(card) {
+function picuGetarKartu(card) {
     if (card) {
         card.classList.add("shake-animation");
         setTimeout(() => {
@@ -142,7 +142,7 @@ function triggerCardShake(card) {
     }
 }
 
-function initInputFocusListeners() {
+function inisialisasiPendengarFokusInput() {
     const usernameInput = document.getElementById("username");
     const passwordInput = document.getElementById("password");
     
@@ -160,7 +160,7 @@ function initInputFocusListeners() {
 }
 
 
-function disableBrowserZooming() {
+function nonaktifkanZoomBrowser() {
     document.addEventListener('keydown', function(e) {
         if (e.ctrlKey && (
             e.key === '=' || 
@@ -186,7 +186,7 @@ function disableBrowserZooming() {
 }
 
 // Custom Toast Alerts
-function showToast(message, type = "info") {
+function tampilkanToast(message, type = "info") {
     const container = document.getElementById("toast-container");
     if (!container) return;
     
@@ -209,3 +209,12 @@ function showToast(message, type = "info") {
         toast.remove();
     }, 3000);
 }
+
+
+// ============================================================
+// ALIASES KOMPATIBILITAS (UNTUK KEAMANAN 100%)
+// ============================================================
+window.openModal = window.bukaModal;
+window.closeModal = window.tutupModal;
+window.showToast = window.tampilkanToast;
+window.formatIDR = window.formatRupiah;

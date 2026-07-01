@@ -116,7 +116,7 @@
         <div class="modal-content payment-modal-content">
             <div class="modal-header">
                 <h2>Pilih Metode & Proses Pembayaran</h2>
-                <button class="btn-close-modal" onclick="closeModal('payment-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('payment-modal')">&times;</button>
             </div>
             
             <div class="payment-modal-body">
@@ -180,7 +180,7 @@
                     </div>
 
                     <div class="payment-action-buttons">
-                        <button class="btn-secondary" onclick="closeModal('payment-modal')">Batal</button>
+                        <button class="btn-secondary" onclick="tutupModal('payment-modal')">Batal</button>
                         <button class="btn-primary" id="btn-process-payment">
                             <i class="fa-solid fa-square-check"></i> Proses Pembayaran
                         </button>
@@ -205,7 +205,7 @@
 
             <div class="modal-header hide-on-print">
                 <h2><i class="fa-solid fa-print"></i> Struk Pembayaran</h2>
-                <button class="btn-close-modal" id="btn-close-receipt-x" onclick="closeModal('receipt-modal')">&times;</button>
+                <button class="btn-close-modal" id="btn-close-receipt-x" onclick="tutupModal('receipt-modal')">&times;</button>
             </div>
 
             <!-- Receipt Container styled as thermal slip -->
@@ -312,7 +312,7 @@
 
             <!-- Receipt Actions -->
             <div class="modal-footer hide-on-print">
-                <button class="btn-secondary" id="btn-close-receipt-footer" onclick="closeModal('receipt-modal')">Tutup</button>
+                <button class="btn-secondary" id="btn-close-receipt-footer" onclick="tutupModal('receipt-modal')">Tutup</button>
                 <button class="btn-primary" id="btn-print-receipt">
                     <i class="fa-solid fa-print"></i> Cetak Struk
                 </button>
@@ -325,7 +325,7 @@
         <div class="modal-content tx-detail-content">
             <div class="modal-header">
                 <h2>Detail Transaksi Penjualan</h2>
-                <button class="btn-close-modal" onclick="closeModal('tx-detail-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('tx-detail-modal')">&times;</button>
             </div>
 
             <div class="tx-detail-body">
@@ -390,7 +390,7 @@
             </div>
 
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeModal('tx-detail-modal')">Tutup</button>
+                <button class="btn-secondary" onclick="tutupModal('tx-detail-modal')">Tutup</button>
                 <button class="btn-primary" id="btn-reprint-from-detail">
                     <i class="fa-solid fa-print"></i> Cetak Ulang Struk
                 </button>
@@ -407,7 +407,7 @@
             <h2>Konfirmasi Keluar</h2>
             <p>Apakah Anda yakin ingin keluar dari sistem kasir.</p>
             <div class="modal-footer justify-center">
-                <button class="btn-secondary" onclick="closeModal('logout-modal')">Batal</button>
+                <button class="btn-secondary" onclick="tutupModal('logout-modal')">Batal</button>
                 <button class="btn-danger" id="btn-confirm-logout">Ya, Keluar</button>
             </div>
         </div>

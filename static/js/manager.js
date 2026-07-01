@@ -31,7 +31,7 @@ let _currentSlipData = null;
 // ============================================================
 // API HELPERS
 // ============================================================
-function apiHeaders() {
+function headerApi() {
     return {
         'Content-Type': 'application/json',
         'X-User-Role' : 'manager',
@@ -40,8 +40,8 @@ function apiHeaders() {
     };
 }
 
-async function apiFetch(url, opts = {}) {
-    const res  = await fetch(url, { headers: apiHeaders(), ...opts });
+async function ambilDataApi(url, opts = {}) {
+    const res  = await fetch(url, { headers: headerApi(), ...opts });
     const data = await res.json();
     if (data.status === 'error') throw new Error(data.message || 'Terjadi kesalahan pada server.');
     return data;
@@ -51,26 +51,26 @@ async function apiFetch(url, opts = {}) {
 // INIT
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
-    loadSession();
-    initRealtimeClock();
-    initProfileGreeting();
-    initNavigationRouter();
-    initMenuCRUD();
-    initCategoryCRUD();
-    initCashierCRUD();
-    initAbsensiController();
-    initReportsController();
-    initPayrollController();
+    muatSesi();
+    inisialisasiJamRealtime();
+    inisialisasiSalamProfil();
+    inisialisasiRouterNavigasi();
+    inisialisasiCRUDMenu();
+    inisialisasiCRUDKategori();
+    inisialisasiCRUDKasir();
+    inisialisasiPengendaliAbsensi();
+    inisialisasiPengendaliLaporan();
+    inisialisasiPengendaliPenggajian();
 
     // Load dashboard awal
-    loadDashboardData();
-    initCharts();
+    muatDataDashboard();
+    inisialisasiGrafik();
 });
 
 // ============================================================
 // SESSION
 // ============================================================
-function loadSession() {
+function muatSesi() {
     try {
         const raw = localStorage.getItem('activeUser');
         if (raw) {
@@ -84,7 +84,7 @@ function loadSession() {
 // ============================================================
 // REALTIME CLOCK
 // ============================================================
-function initRealtimeClock() {
+function inisialisasiJamRealtime() {
     const el = document.getElementById("live-time");
     if (!el) return;
     const days   = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
@@ -99,7 +99,7 @@ function initRealtimeClock() {
 // ============================================================
 // PROFILE GREETING
 // ============================================================
-function initProfileGreeting() {
+function inisialisasiSalamProfil() {
     const u = JSON.parse(localStorage.getItem("activeUser"));
     if (!u) return;
     const nameEl = document.getElementById("active-manager-name");
@@ -111,7 +111,7 @@ function initProfileGreeting() {
 // ============================================================
 // NAVIGATION ROUTER
 // ============================================================
-function initNavigationRouter() {
+function inisialisasiRouterNavigasi() {
     const navItems  = document.querySelectorAll(".nav-item");
     const views     = document.querySelectorAll(".app-view");
     const pageTitle = document.getElementById("page-title");
@@ -129,12 +129,12 @@ function initNavigationRouter() {
             if (pageTitle) pageTitle.textContent = item.querySelector("span").textContent;
 
             // Reload data per section
-            if      (target === "dashboard")           loadDashboardData();
-            else if (target === "kelola-menu")         { loadCategories().then(() => loadMenuItems()); switchInnerTab('daftar-menu'); }
-            else if (target === "kelola-kasir")        loadCashiers();
-            else if (target === "monitoring-absensi")  loadAbsensi();
-            else if (target === "penggajian")          { loadPayroll().then(() => { renderPayrollTable(); updatePayrollMetrics(); }); }
-            else if (target === "laporan-penjualan")   loadTransactions();
+            if      (target === "dashboard")           muatDataDashboard();
+            else if (target === "kelola-menu")         { muatKategori().then(() => muatDaftarMenu()); pindahTabDalam('daftar-menu'); }
+            else if (target === "kelola-kasir")        muatDaftarKasir();
+            else if (target === "monitoring-absensi")  muatAbsensi();
+            else if (target === "penggajian")          { muatPenggajian().then(() => { tampilkanTabelPenggajian(); perbaruiMetrikPenggajian(); }); }
+            else if (target === "laporan-penjualan")   muatTransaksi();
         });
     });
 
@@ -142,7 +142,7 @@ function initNavigationRouter() {
         document.querySelector('[data-target="laporan-penjualan"]')?.click();
     });
 
-    if (logoutBtn) logoutBtn.addEventListener("click", () => openModal("logout-confirm-modal"));
+    if (logoutBtn) logoutBtn.addEventListener("click", () => bukaModal("logout-confirm-modal"));
 
     document.getElementById("btn-confirm-logout")?.addEventListener("click", () => {
         localStorage.removeItem("activeUser");
@@ -154,25 +154,25 @@ function initNavigationRouter() {
 // ============================================================
 // DASHBOARD
 // ============================================================
-async function loadDashboardData() {
+async function muatDataDashboard() {
     try {
         const [txData, usersData] = await Promise.all([
-            apiFetch(`${API_BASE}/transaksi`),
-            apiFetch(`${API_BASE}/users`)
+            ambilDataApi(`${API_BASE}/transaksi`),
+            ambilDataApi(`${API_BASE}/users`)
         ]);
         TRANSACTIONS = txData.data   || [];
         CASHIERS     = (usersData.data || []).filter(u => u.role === 'kasir');
 
-        updateDashboardMetrics();
-        renderRecentTransactionsTable();
-        updateCharts();
+        perbaruiMetrikDashboard();
+        tampilkanTabelTransaksiTerbaru();
+        perbaruiGrafik();
     } catch(e) {
         console.error('Dashboard load error:', e);
-        showToast('Gagal memuat data dashboard: ' + e.message, 'danger');
+        tampilkanToast('Gagal memuat data dashboard: ' + e.message, 'danger');
     }
 }
 
-function updateDashboardMetrics() {
+function perbaruiMetrikDashboard() {
     const totalRevenue = TRANSACTIONS.reduce((s, t) => s + Number(t.total_harga || 0), 0);
 
     const revEl     = document.getElementById("stat-revenue");
@@ -180,17 +180,17 @@ function updateDashboardMetrics() {
     const cashierEl = document.getElementById("stat-total-cashiers");
     const topMenuEl = document.getElementById("stat-top-menu");
 
-    if (revEl)     revEl.textContent     = formatIDR(totalRevenue);
+    if (revEl)     revEl.textContent     = formatRupiah(totalRevenue);
     if (txEl)      txEl.textContent      = TRANSACTIONS.length;
     if (cashierEl) cashierEl.textContent = CASHIERS.length;
-    if (topMenuEl) { topMenuEl.textContent = '...'; loadTopMenuAllTime(topMenuEl); }
+    if (topMenuEl) { topMenuEl.textContent = '...'; muatMenuTeratasSemuaWaktu(topMenuEl); }
 }
 
-async function loadTopMenuAllTime(el) {
+async function muatMenuTeratasSemuaWaktu(el) {
     try {
         const recent  = TRANSACTIONS.slice(0, 30);
         const details = await Promise.all(
-            recent.map(tx => apiFetch(`${API_BASE}/transaksi/${tx.id_transaksi}`).catch(() => null))
+            recent.map(tx => ambilDataApi(`${API_BASE}/transaksi/${tx.id_transaksi}`).catch(() => null))
         );
         const qtyMap = {};
         details.forEach(d => {
@@ -207,7 +207,7 @@ async function loadTopMenuAllTime(el) {
     }
 }
 
-function renderRecentTransactionsTable() {
+function tampilkanTabelTransaksiTerbaru() {
     const tbody = document.getElementById("recent-transactions-tbody");
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -227,9 +227,9 @@ function renderRecentTransactionsTable() {
             <td><code>${txId}</code></td>
             <td>${time}</td>
             <td>${tx.nama_kasir || '-'}</td>
-            <td>${formatIDR(sub)}</td>
-            <td style="display: none;">${formatIDR(taxSvc)}</td>
-            <td><strong>${formatIDR(total)}</strong></td>
+            <td>${formatRupiah(sub)}</td>
+            <td style="display: none;">${formatRupiah(taxSvc)}</td>
+            <td><strong>${formatRupiah(total)}</strong></td>
             <td><span class="badge ${tx.metode_pembayaran === 'Cash' ? 'badge-success' : 'badge-warning'}">${tx.metode_pembayaran || '-'}</span></td>
             <td><span class="badge badge-success">Selesai</span></td>
         `;
@@ -240,7 +240,7 @@ function renderRecentTransactionsTable() {
 // ============================================================
 // CHARTS (real data dari /api/laporan/harian)
 // ============================================================
-function initCharts() {
+function inisialisasiGrafik() {
     const revCtx    = document.getElementById("revenueMonthlyChart");
     const weeklyCtx = document.getElementById("weeklyTxChart");
     if (!revCtx || !weeklyCtx) return;
@@ -283,7 +283,7 @@ function initCharts() {
     });
 }
 
-async function updateCharts() {
+async function perbaruiGrafik() {
     if (!revenueChart || !weeklyChart) return;
     try {
         const end   = new Date();
@@ -291,7 +291,7 @@ async function updateCharts() {
         const dari   = start.toISOString().slice(0, 10);
         const sampai = end.toISOString().slice(0, 10);
 
-        const data = await apiFetch(`${API_BASE}/laporan/harian?dari=${dari}&sampai=${sampai}`);
+        const data = await ambilDataApi(`${API_BASE}/laporan/harian?dari=${dari}&sampai=${sampai}`);
         const rows = data.data || [];
 
         const monthNames = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
@@ -323,9 +323,9 @@ async function updateCharts() {
 // ============================================================
 // KELOLA MENU (Products CRUD via API)
 // ============================================================
-async function loadMenuItems() {
+async function muatDaftarMenu() {
     try {
-        const data = await apiFetch(`${API_BASE}/products`);
+        const data = await ambilDataApi(`${API_BASE}/products`);
         MENU_ITEMS = (data.data || []).map(p => ({
             id       : p.id_product,
             name     : p.nama_product,
@@ -334,16 +334,16 @@ async function loadMenuItems() {
             foto     : p.foto,
             warna    : p.warna || '#4e3629'
         }));
-        populateMenuCategoryFilter();
-        filterMenuTable();
+        isiFilterKategoriMenu();
+        saringTabelMenu();
     } catch(e) {
-        showToast('Gagal memuat data menu: ' + e.message, 'danger');
+        tampilkanToast('Gagal memuat data menu: ' + e.message, 'danger');
     }
 }
 
-async function loadCategories() {
+async function muatKategori() {
     try {
-        const data = await apiFetch(`${API_BASE}/kategori`);
+        const data = await ambilDataApi(`${API_BASE}/kategori`);
         const iconMap = {
             'coffee'    : 'fa-mug-hot',
             'non-coffee': 'fa-glass-water',
@@ -360,17 +360,17 @@ async function loadCategories() {
     }
 }
 
-window.switchInnerTab = function(tabId) {
+window.pindahTabDalam = function(tabId) {
     document.querySelectorAll('.inner-tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`tab-btn-${tabId}`)?.classList.add('active');
     document.querySelectorAll('.inner-tab-pane').forEach(p => p.classList.remove('active'));
     document.getElementById(`inner-tab-${tabId}`)?.classList.add('active');
 
-    if      (tabId === 'daftar-menu')     loadMenuItems();
-    else if (tabId === 'kelola-kategori') { loadCategories().then(renderCategoriesTable); }
+    if      (tabId === 'daftar-menu')     muatDaftarMenu();
+    else if (tabId === 'kelola-kategori') { muatKategori().then(tampilkanTabelKategori); }
 }
 
-function populateMenuCategoryFilter() {
+function isiFilterKategoriMenu() {
     const sel = document.getElementById('menu-filter-category');
     if (!sel) return;
     const cur = sel.value;
@@ -383,24 +383,24 @@ function populateMenuCategoryFilter() {
     if (cur) sel.value = cur;
 }
 
-function initMenuCRUD() {
+function inisialisasiCRUDMenu() {
     document.getElementById("btn-add-menu-modal")?.addEventListener("click", () => {
         document.getElementById("menu-form")?.reset();
         document.getElementById("menu-form-id").value = "";
         document.getElementById("menu-modal-title").textContent = "Tambah Menu Baru";
-        resetMenuPhotoArea();
+        aturUlangAreaFotoMenu();
         if (!CATEGORIES.length) {
-            loadCategories().then(() => populateMenuFormCategories());
+            muatKategori().then(() => isiKategoriFormMenu());
         } else {
-            populateMenuFormCategories();
+            isiKategoriFormMenu();
         }
-        openModal("menu-modal");
+        bukaModal("menu-modal");
     });
-    document.getElementById("menu-search")?.addEventListener("input", filterMenuTable);
-    document.getElementById("menu-filter-category")?.addEventListener("change", filterMenuTable);
+    document.getElementById("menu-search")?.addEventListener("input", saringTabelMenu);
+    document.getElementById("menu-filter-category")?.addEventListener("change", saringTabelMenu);
 }
 
-function populateMenuFormCategories(selectedVal) {
+function isiKategoriFormMenu(selectedVal) {
     const sel = document.getElementById("menu-form-category");
     if (!sel) return;
     sel.innerHTML = "";
@@ -412,7 +412,7 @@ function populateMenuFormCategories(selectedVal) {
     if (selectedVal) sel.value = selectedVal;
 }
 
-function resetMenuPhotoArea() {
+function aturUlangAreaFotoMenu() {
     const preview     = document.getElementById("menu-image-preview-element");
     const placeholder = document.getElementById("menu-photo-placeholder");
     if (preview) { preview.src = ""; preview.classList.add("hidden"); }
@@ -423,7 +423,7 @@ function resetMenuPhotoArea() {
     if (imgInput) imgInput.value = "";
 }
 
-window.handleMenuFileUpload = function(input) {
+window.tanganiUnggahBerkasMenu = function(input) {
     const file = input.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -439,7 +439,7 @@ window.handleMenuFileUpload = function(input) {
     reader.readAsDataURL(file);
 }
 
-function filterMenuTable() {
+function saringTabelMenu() {
     const searchVal = (document.getElementById("menu-search")?.value || "").toLowerCase();
     const catVal    = document.getElementById("menu-filter-category")?.value || "all";
     const filtered  = MENU_ITEMS.filter(item => {
@@ -447,10 +447,10 @@ function filterMenuTable() {
         const mCat    = catVal === "all" || item.category === catVal;
         return mSearch && mCat;
     });
-    renderMenuTable(filtered);
+    tampilkanTabelMenu(filtered);
 }
 
-function renderMenuTable(items) {
+function tampilkanTabelMenu(items) {
     const tbody = document.getElementById("menu-table-tbody");
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -473,10 +473,10 @@ function renderMenuTable(items) {
             </td>
             <td><strong>${item.name}</strong></td>
             <td><span class="category-pill">${catLabel}</span></td>
-            <td><strong>${formatIDR(item.price)}</strong></td>
+            <td><strong>${formatRupiah(item.price)}</strong></td>
             <td style="text-align:center">
                 <button class="btn-secondary" onclick="editMenu(${item.id})" style="padding:6px 12px;font-size:11px;margin-right:6px"><i class="fa-solid fa-pencil"></i> Edit</button>
-                <button class="btn-danger"    onclick="deleteMenu(${item.id})" style="padding:6px 12px;font-size:11px"><i class="fa-solid fa-trash"></i> Hapus</button>
+                <button class="btn-danger"    onclick="hapusMenu(${item.id})" style="padding:6px 12px;font-size:11px"><i class="fa-solid fa-trash"></i> Hapus</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -486,13 +486,13 @@ function renderMenuTable(items) {
 window.editMenu = function(id) {
     const item = MENU_ITEMS.find(m => m.id === id);
     if (!item) return;
-    if (!CATEGORIES.length) loadCategories().then(() => populateMenuFormCategories(item.category));
-    else populateMenuFormCategories(item.category);
+    if (!CATEGORIES.length) muatKategori().then(() => isiKategoriFormMenu(item.category));
+    else isiKategoriFormMenu(item.category);
     document.getElementById("menu-form-id").value    = item.id;
     document.getElementById("menu-form-name").value  = item.name;
     document.getElementById("menu-form-desc").value  = "";
     document.getElementById("menu-form-price").value = item.price;
-    resetMenuPhotoArea();
+    aturUlangAreaFotoMenu();
     if (item.foto) {
         const preview = document.getElementById("menu-image-preview-element");
         const placeholder = document.getElementById("menu-photo-placeholder");
@@ -502,21 +502,21 @@ window.editMenu = function(id) {
         if (imgInput) imgInput.value = item.foto;
     }
     document.getElementById("menu-modal-title").textContent = "Edit Menu";
-    openModal("menu-modal");
+    bukaModal("menu-modal");
 }
 
-window.deleteMenu = async function(id) {
+window.hapusMenu = async function(id) {
     if (!confirm("Apakah Anda yakin ingin menghapus menu ini?")) return;
     try {
-        await apiFetch(`${API_BASE}/products/${id}`, { method: 'DELETE' });
-        showToast("Menu berhasil dihapus!", "success");
-        await loadMenuItems();
+        await ambilDataApi(`${API_BASE}/products/${id}`, { method: 'DELETE' });
+        tampilkanToast("Menu berhasil dihapus!", "success");
+        await muatDaftarMenu();
     } catch(e) {
-        showToast("Gagal hapus menu: " + e.message, "danger");
+        tampilkanToast("Gagal hapus menu: " + e.message, "danger");
     }
 }
 
-async function handleMenuSubmit(e) {
+async function tanganiKirimMenu(e) {
     e.preventDefault();
     const idVal    = document.getElementById("menu-form-id").value;
     const name     = document.getElementById("menu-form-name").value.trim();
@@ -525,31 +525,31 @@ async function handleMenuSubmit(e) {
     const foto     = document.getElementById("menu-form-image").value || "";
 
     if (!name || !category || !price) {
-        showToast("Nama, kategori, dan harga wajib diisi!", "warning"); return;
+        tampilkanToast("Nama, kategori, dan harga wajib diisi!", "warning"); return;
     }
 
     const payload = { nama_product: name, kategori: category, harga: price, foto: foto, warna: '#4e3629' };
 
     try {
         if (idVal) {
-            await apiFetch(`${API_BASE}/products/${idVal}`, { method:'PUT', body: JSON.stringify(payload) });
-            showToast("Menu berhasil diperbarui!", "success");
+            await ambilDataApi(`${API_BASE}/products/${idVal}`, { method:'PUT', body: JSON.stringify(payload) });
+            tampilkanToast("Menu berhasil diperbarui!", "success");
         } else {
-            await apiFetch(`${API_BASE}/products`, { method:'POST', body: JSON.stringify(payload) });
-            showToast("Menu baru berhasil ditambahkan!", "success");
+            await ambilDataApi(`${API_BASE}/products`, { method:'POST', body: JSON.stringify(payload) });
+            tampilkanToast("Menu baru berhasil ditambahkan!", "success");
         }
-        closeModal("menu-modal");
-        await loadMenuItems();
+        tutupModal("menu-modal");
+        await muatDaftarMenu();
     } catch(e) {
-        showToast("Gagal simpan menu: " + e.message, "danger");
+        tampilkanToast("Gagal simpan menu: " + e.message, "danger");
     }
 }
-window.handleMenuSubmit = handleMenuSubmit;
+window.tanganiKirimMenu = tanganiKirimMenu;
 
 // ============================================================
 // KELOLA KATEGORI (CRUD via API)
 // ============================================================
-function initCategoryCRUD() {
+function inisialisasiCRUDKategori() {
     // Tampilkan tombol tambah
     const addBtn = document.getElementById("btn-add-category-modal");
     if (addBtn) addBtn.style.display = "";
@@ -558,14 +558,14 @@ function initCategoryCRUD() {
         document.getElementById("category-form")?.reset();
         document.getElementById("category-form-id").value = "";
         document.getElementById("category-modal-title").textContent = "Tambah Kategori Baru";
-        openModal("category-modal");
+        bukaModal("category-modal");
     });
     
-    document.getElementById("category-search")?.addEventListener("input", renderCategoriesTable);
-    document.getElementById("category-form")?.addEventListener("submit", handleCategorySubmit);
+    document.getElementById("category-search")?.addEventListener("input", tampilkanTabelKategori);
+    document.getElementById("category-form")?.addEventListener("submit", tanganiKirimKategori);
 }
 
-async function handleCategorySubmit(e) {
+async function tanganiKirimKategori(e) {
     if (e) e.preventDefault();
     const nameInput = document.getElementById("category-form-name");
     const iconInput = document.getElementById("category-form-icon");
@@ -573,7 +573,7 @@ async function handleCategorySubmit(e) {
     const icon = iconInput ? iconInput.value.trim() : "fa-tag";
     
     if (!name) {
-        showToast("Nama kategori wajib diisi!", "warning");
+        tampilkanToast("Nama kategori wajib diisi!", "warning");
         return;
     }
     
@@ -582,24 +582,24 @@ async function handleCategorySubmit(e) {
             nama_kategori: name,
             icon: icon
         };
-        await apiFetch(`${API_BASE}/kategori`, {
+        await ambilDataApi(`${API_BASE}/kategori`, {
             method: 'POST',
             body: JSON.stringify(payload)
         });
-        showToast("Kategori baru berhasil ditambahkan!", "success");
-        closeModal("category-modal");
+        tampilkanToast("Kategori baru berhasil ditambahkan!", "success");
+        tutupModal("category-modal");
         
-        await loadCategories();
-        renderCategoriesTable();
-        populateMenuCategoryFilter();
+        await muatKategori();
+        tampilkanTabelKategori();
+        isiFilterKategoriMenu();
     } catch(e) {
-        showToast("Gagal menyimpan kategori: " + e.message, "danger");
+        tampilkanToast("Gagal menyimpan kategori: " + e.message, "danger");
     }
 }
-window.handleCategorySubmit = handleCategorySubmit;
+window.tanganiKirimKategori = tanganiKirimKategori;
 
 
-function renderCategoriesTable() {
+function tampilkanTabelKategori() {
     const tbody = document.getElementById("categories-table-tbody");
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -624,18 +624,18 @@ function renderCategoriesTable() {
 // ============================================================
 // KELOLA KASIR (Users CRUD via API)
 // ============================================================
-async function loadCashiers() {
+async function muatDaftarKasir() {
     try {
-        const data = await apiFetch(`${API_BASE}/users`);
+        const data = await ambilDataApi(`${API_BASE}/users`);
         CASHIERS   = (data.data || []).filter(u => u.role === 'kasir');
-        renderCashierTable();
-        populatePayrollCashierSelect();
+        tampilkanTabelKasir();
+        isiPilihanKasirPenggajian();
     } catch(e) {
-        showToast('Gagal memuat data kasir: ' + e.message, 'danger');
+        tampilkanToast('Gagal memuat data kasir: ' + e.message, 'danger');
     }
 }
 
-function initCashierCRUD() {
+function inisialisasiCRUDKasir() {
     document.getElementById("btn-add-cashier-modal")?.addEventListener("click", () => {
         document.getElementById("cashier-form")?.reset();
         document.getElementById("cashier-form-id").value = "";
@@ -645,13 +645,13 @@ function initCashierCRUD() {
         if (pwWrap) pwWrap.style.display = "";
         const pwInput = document.getElementById("cashier-form-password");
         if (pwInput) pwInput.required = true;
-        openModal("cashier-modal");
+        bukaModal("cashier-modal");
     });
-    document.getElementById("cashier-form")?.addEventListener("submit", handleCashierSubmit);
-    document.getElementById("cashier-search")?.addEventListener("input", renderCashierTable);
+    document.getElementById("cashier-form")?.addEventListener("submit", tanganiKirimKasir);
+    document.getElementById("cashier-search")?.addEventListener("input", tampilkanTabelKasir);
 }
 
-function renderCashierTable() {
+function tampilkanTabelKasir() {
     const tbody = document.getElementById("cashier-table-tbody");
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -688,11 +688,11 @@ function renderCashierTable() {
 window.toggleCashierStatus = async function(id, currentStatus) {
     const newStatus = currentStatus === 'aktif' ? 'nonaktif' : 'aktif';
     try {
-        await apiFetch(`${API_BASE}/users/${id}`, { method:'PUT', body: JSON.stringify({ status: newStatus }) });
-        showToast(`Status kasir diubah menjadi ${newStatus}!`, 'success');
-        await loadCashiers();
+        await ambilDataApi(`${API_BASE}/users/${id}`, { method:'PUT', body: JSON.stringify({ status: newStatus }) });
+        tampilkanToast(`Status kasir diubah menjadi ${newStatus}!`, 'success');
+        await muatDaftarKasir();
     } catch(e) {
-        showToast('Gagal ubah status: ' + e.message, 'danger');
+        tampilkanToast('Gagal ubah status: ' + e.message, 'danger');
     }
 }
 
@@ -710,21 +710,21 @@ window.editCashier = function(id) {
     const pwInput = document.getElementById("cashier-form-password");
     if (pwWrap)  pwWrap.style.display = "none";
     if (pwInput) { pwInput.required = false; pwInput.value = ""; }
-    openModal("cashier-modal");
+    bukaModal("cashier-modal");
 }
 
 window.deleteCashier = async function(id) {
     if (!confirm("Apakah Anda yakin ingin menghapus akun kasir ini?")) return;
     try {
-        await apiFetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
-        showToast("Akun kasir berhasil dihapus!", "success");
-        await loadCashiers();
+        await ambilDataApi(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+        tampilkanToast("Akun kasir berhasil dihapus!", "success");
+        await muatDaftarKasir();
     } catch(e) {
-        showToast("Gagal hapus kasir: " + e.message, "danger");
+        tampilkanToast("Gagal hapus kasir: " + e.message, "danger");
     }
 }
 
-async function handleCashierSubmit(e) {
+async function tanganiKirimKasir(e) {
     e.preventDefault();
     const idVal    = document.getElementById("cashier-form-id").value;
     const nama     = document.getElementById("cashier-form-name").value.trim();
@@ -738,53 +738,53 @@ async function handleCashierSubmit(e) {
             // Edit: password hanya dikirim jika diisi
             const payload = { nama, email, status };
             if (password) payload.password = password;
-            await apiFetch(`${API_BASE}/users/${idVal}`, { method:'PUT', body: JSON.stringify(payload) });
-            showToast("Akun kasir berhasil diperbarui!", "success");
+            await ambilDataApi(`${API_BASE}/users/${idVal}`, { method:'PUT', body: JSON.stringify(payload) });
+            tampilkanToast("Akun kasir berhasil diperbarui!", "success");
         } else {
             // Baru: password wajib
-            if (!password) { showToast("Password wajib diisi untuk akun baru!", "warning"); return; }
-            await apiFetch(`${API_BASE}/users`, {
+            if (!password) { tampilkanToast("Password wajib diisi untuk akun baru!", "warning"); return; }
+            await ambilDataApi(`${API_BASE}/users`, {
                 method: 'POST',
                 body: JSON.stringify({ nama, username, password, email, role: 'kasir' })
             });
-            showToast("Akun kasir baru berhasil dibuat!", "success");
+            tampilkanToast("Akun kasir baru berhasil dibuat!", "success");
         }
-        closeModal("cashier-modal");
-        await loadCashiers();
+        tutupModal("cashier-modal");
+        await muatDaftarKasir();
     } catch(e) {
-        showToast("Gagal simpan kasir: " + e.message, "danger");
+        tampilkanToast("Gagal simpan kasir: " + e.message, "danger");
     }
 }
 
 // ============================================================
 // MONITORING ABSENSI (API: GET /api/absensi)
 // ============================================================
-async function loadAbsensi() {
+async function muatAbsensi() {
     try {
-        const data  = await apiFetch(`${API_BASE}/absensi`);
+        const data  = await ambilDataApi(`${API_BASE}/absensi`);
         ATTENDANCES = data.data || [];
-        updateAbsensiMetrics();
-        renderAbsensiTable();
+        perbaruiMetrikAbsensi();
+        tampilkanTabelAbsensi();
     } catch(e) {
-        showToast('Gagal memuat data absensi: ' + e.message, 'danger');
+        tampilkanToast('Gagal memuat data absensi: ' + e.message, 'danger');
     }
 }
 
-function initAbsensiController() {
-    document.getElementById("absensi-search")?.addEventListener("input", renderAbsensiTable);
-    document.getElementById("absensi-filter-date")?.addEventListener("change", renderAbsensiTable);
+function inisialisasiPengendaliAbsensi() {
+    document.getElementById("absensi-search")?.addEventListener("input", tampilkanTabelAbsensi);
+    document.getElementById("absensi-filter-date")?.addEventListener("change", tampilkanTabelAbsensi);
     document.getElementById("btn-reset-absensi-filters")?.addEventListener("click", () => {
         const s = document.getElementById("absensi-search");
         const d = document.getElementById("absensi-filter-date");
         if (s) s.value = "";
         if (d) d.value = "";
-        renderAbsensiTable();
+        tampilkanTabelAbsensi();
     });
-    document.getElementById("btn-export-absensi-pdf")?.addEventListener("click", exportAbsensiPdf);
-    document.getElementById("btn-export-absensi-excel")?.addEventListener("click", exportAbsensiExcel);
+    document.getElementById("btn-export-absensi-pdf")?.addEventListener("click", eksporAbsensiKePdf);
+    document.getElementById("btn-export-absensi-excel")?.addEventListener("click", eksporAbsensiKeExcel);
 }
 
-function updateAbsensiMetrics() {
+function perbaruiMetrikAbsensi() {
     const today = new Date().toISOString().slice(0, 10);
     let hadir = 0, terlambat = 0, aktif = 0;
     ATTENDANCES.forEach(att => {
@@ -803,7 +803,7 @@ function updateAbsensiMetrics() {
     if (a) a.textContent = aktif;
 }
 
-function renderAbsensiTable() {
+function tampilkanTabelAbsensi() {
     const tbody = document.getElementById("absensi-table-tbody");
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -830,7 +830,7 @@ function renderAbsensiTable() {
             <td><code style="color:var(--caramel-gold,#c68a4c)">${keluar}</code></td>
             <td><span class="badge ${att.status === 'Hadir' ? 'badge-success' : 'badge-warning'}">${att.status || '-'}</span></td>
             <td style="text-align:center">
-                <button class="btn-secondary" onclick="viewAbsensiDetail(${att.id_absensi})" style="padding:6px 12px;font-size:11px">
+                <button class="btn-secondary" onclick="lihatDetailAbsensi(${att.id_absensi})" style="padding:6px 12px;font-size:11px">
                     <i class="fa-regular fa-eye"></i> Detail
                 </button>
             </td>
@@ -839,7 +839,7 @@ function renderAbsensiTable() {
     });
 }
 
-window.viewAbsensiDetail = function(id) {
+window.lihatDetailAbsensi = function(id) {
     const att = ATTENDANCES.find(a => a.id_absensi === id);
     if (!att) return;
     document.getElementById("abs-detail-name").textContent   = att.nama_kasir || '-';
@@ -876,28 +876,28 @@ window.viewAbsensiDetail = function(id) {
         }
     }
 
-    openModal("absensi-detail-modal");
+    bukaModal("absensi-detail-modal");
 }
 
 // ============================================================
 // LAPORAN PENJUALAN (GET /api/transaksi + /api/transaksi/<id>)
 // ============================================================
-async function loadTransactions() {
+async function muatTransaksi() {
     try {
-        const data   = await apiFetch(`${API_BASE}/transaksi`);
+        const data   = await ambilDataApi(`${API_BASE}/transaksi`);
         TRANSACTIONS = data.data || [];
-        updateReportMetrics();
-        renderReportTable();
+        perbaruiMetrikLaporan();
+        tampilkanTabelLaporan();
     } catch(e) {
-        showToast('Gagal memuat data transaksi: ' + e.message, 'danger');
+        tampilkanToast('Gagal memuat data transaksi: ' + e.message, 'danger');
     }
 }
 
-function initReportsController() {
+function inisialisasiPengendaliLaporan() {
     const ids = ["report-search","report-date-start","report-date-end","report-payment-method"];
     ids.forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', renderReportTable);
+        if (el) el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', tampilkanTabelLaporan);
     });
     document.getElementById("btn-reset-report-filters")?.addEventListener("click", () => {
         document.getElementById("report-search")?.["value"] !== undefined && (document.getElementById("report-search").value = "");
@@ -905,20 +905,20 @@ function initReportsController() {
         document.getElementById("report-date-end")   && (document.getElementById("report-date-end").value   = "");
         const pm = document.getElementById("report-payment-method");
         if (pm) pm.value = "all";
-        updateReportMetrics();
-        renderReportTable();
+        perbaruiMetrikLaporan();
+        tampilkanTabelLaporan();
     });
-    document.getElementById("btn-export-pdf")?.addEventListener("click", exportReportPdf);
-    document.getElementById("btn-export-excel")?.addEventListener("click", exportReportExcel);
-    document.getElementById("btn-email-report")?.addEventListener("click", sendEmailReport);
+    document.getElementById("btn-export-pdf")?.addEventListener("click", eksporLaporanKePdf);
+    document.getElementById("btn-export-excel")?.addEventListener("click", eksporLaporanKeExcel);
+    document.getElementById("btn-email-report")?.addEventListener("click", kirimLaporanEmail);
 }
 
-function updateReportMetrics() {
+function perbaruiMetrikLaporan() {
     const total   = TRANSACTIONS.reduce((s, t) => s + Number(t.total_harga || 0), 0);
     const revEl   = document.getElementById("report-total-revenue");
     const txEl    = document.getElementById("report-total-tx-count");
     const topEl   = document.getElementById("report-top-cashier");
-    if (revEl) revEl.textContent = formatIDR(total);
+    if (revEl) revEl.textContent = formatRupiah(total);
     if (txEl)  txEl.textContent  = TRANSACTIONS.length;
     if (topEl) {
         const cMap = {};
@@ -928,7 +928,7 @@ function updateReportMetrics() {
     }
 }
 
-function renderReportTable() {
+function tampilkanTabelLaporan() {
     const tbody = document.getElementById("report-table-tbody");
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -953,7 +953,7 @@ function renderReportTable() {
     const filteredRevenue = filtered.reduce((s,t) => s + Number(t.total_harga||0), 0);
     const revEl = document.getElementById("report-total-revenue");
     const txEl  = document.getElementById("report-total-tx-count");
-    if (revEl) revEl.textContent = formatIDR(filteredRevenue);
+    if (revEl) revEl.textContent = formatRupiah(filteredRevenue);
     if (txEl)  txEl.textContent  = filtered.length;
 
     if (!filtered.length) {
@@ -971,9 +971,9 @@ function renderReportTable() {
             <td><code>${txId}</code></td>
             <td>${dateStr}</td>
             <td>${tx.nama_kasir || '-'}</td>
-            <td>${formatIDR(sub)}</td>
-            <td style="display: none;">${formatIDR(taxSvc)}</td>
-            <td><strong>${formatIDR(total)}</strong></td>
+            <td>${formatRupiah(sub)}</td>
+            <td style="display: none;">${formatRupiah(taxSvc)}</td>
+            <td><strong>${formatRupiah(total)}</strong></td>
             <td><span class="badge ${tx.metode_pembayaran === 'Cash' ? 'badge-success' : 'badge-warning'}">${tx.metode_pembayaran || '-'}</span></td>
             <td style="text-align:center">
                 <button class="btn-secondary" onclick="viewTransactionDetail(${tx.id_transaksi})" style="padding:6px 12px;font-size:11px">
@@ -987,7 +987,7 @@ function renderReportTable() {
 
 window.viewTransactionDetail = async function(id) {
     try {
-        const data  = await apiFetch(`${API_BASE}/transaksi/${id}`);
+        const data  = await ambilDataApi(`${API_BASE}/transaksi/${id}`);
         const tx    = data.data;
         const items = tx.items || [];
         const sub   = items.reduce((s, i) => s + Number(i.subtotal || 0), 0);
@@ -1000,10 +1000,10 @@ window.viewTransactionDetail = async function(id) {
         document.getElementById("tx-detail-date").textContent       = dateStr;
         document.getElementById("tx-detail-cashier").textContent    = tx.nama_kasir || '-';
         document.getElementById("tx-detail-method").textContent     = tx.metode_pembayaran || '-';
-        document.getElementById("tx-detail-subtotal").textContent   = formatIDR(sub);
-        document.getElementById("tx-detail-tax").textContent        = formatIDR(tax);
-        document.getElementById("tx-detail-service").textContent    = formatIDR(svc);
-        document.getElementById("tx-detail-grand-total").textContent = formatIDR(Number(tx.total_harga));
+        document.getElementById("tx-detail-subtotal").textContent   = formatRupiah(sub);
+        document.getElementById("tx-detail-tax").textContent        = formatRupiah(tax);
+        document.getElementById("tx-detail-service").textContent    = formatRupiah(svc);
+        document.getElementById("tx-detail-grand-total").textContent = formatRupiah(Number(tx.total_harga));
 
         const tbody = document.getElementById("tx-detail-items-tbody");
         if (tbody) {
@@ -1012,32 +1012,32 @@ window.viewTransactionDetail = async function(id) {
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
                     <td><strong>${item.nama_product || '-'}</strong></td>
-                    <td style="text-align:right">${formatIDR(Number(item.harga_satuan || 0))}</td>
+                    <td style="text-align:right">${formatRupiah(Number(item.harga_satuan || 0))}</td>
                     <td style="text-align:center">${item.qty}</td>
-                    <td style="text-align:right"><strong>${formatIDR(Number(item.subtotal || 0))}</strong></td>
+                    <td style="text-align:right"><strong>${formatRupiah(Number(item.subtotal || 0))}</strong></td>
                 `;
                 tbody.appendChild(tr);
             });
         }
-        openModal("tx-detail-modal");
+        bukaModal("tx-detail-modal");
     } catch(e) {
-        showToast("Gagal load detail transaksi: " + e.message, "danger");
+        tampilkanToast("Gagal load detail transaksi: " + e.message, "danger");
     }
 }
 
 // ============================================================
 // PENGGAJIAN (Database-backed CRUD)
 // ============================================================
-async function loadPayroll() {
+async function muatPenggajian() {
     try {
-        const data = await apiFetch(`${API_BASE}/payroll`);
+        const data = await ambilDataApi(`${API_BASE}/payroll`);
         PAYROLL = data.data || [];
     } catch(e) {
-        showToast('Gagal memuat data penggajian: ' + e.message, 'danger');
+        tampilkanToast('Gagal memuat data penggajian: ' + e.message, 'danger');
     }
 }
 
-function initPayrollController() {
+function inisialisasiPengendaliPenggajian() {
     const addBtn      = document.getElementById("btn-add-payroll-modal");
     const search      = document.getElementById("payroll-search");
     const filterMonth = document.getElementById("payroll-filter-month");
@@ -1057,27 +1057,27 @@ function initPayrollController() {
             document.getElementById("payroll-total-display").textContent = "Rp 0";
             const rateEl = document.getElementById("payroll-form-rate");
             if (rateEl) rateEl.value = 75000;
-            populatePayrollCashierSelect();
-            openModal("payroll-modal");
+            isiPilihanKasirPenggajian();
+            bukaModal("payroll-modal");
         });
     }
     
-    document.getElementById("payroll-form-cashier")?.addEventListener("change", triggerAutoCalculateShifts);
-    document.getElementById("payroll-form-period")?.addEventListener("change", triggerAutoCalculateShifts);
+    document.getElementById("payroll-form-cashier")?.addEventListener("change", picuHitungOtomatisShift);
+    document.getElementById("payroll-form-period")?.addEventListener("change", picuHitungOtomatisShift);
 
-    if (search)      search.addEventListener("input", renderPayrollTable);
-    if (filterMonth) filterMonth.addEventListener("change", renderPayrollTable);
+    if (search)      search.addEventListener("input", tampilkanTabelPenggajian);
+    if (filterMonth) filterMonth.addEventListener("change", tampilkanTabelPenggajian);
     if (resetBtn) {
         resetBtn.addEventListener("click", () => {
             if (search) search.value = "";
             if (filterMonth) filterMonth.value = "";
-            renderPayrollTable(); updatePayrollMetrics();
+            tampilkanTabelPenggajian(); perbaruiMetrikPenggajian();
         });
     }
-    if (exportBtn) exportBtn.addEventListener("click", exportPayrollExcel);
+    if (exportBtn) exportBtn.addEventListener("click", eksporPenggajianKeExcel);
 }
 
-async function triggerAutoCalculateShifts() {
+async function picuHitungOtomatisShift() {
     const cashier = document.getElementById("payroll-form-cashier")?.value;
     const period  = document.getElementById("payroll-form-period")?.value;
     const shiftsInput = document.getElementById("payroll-form-shifts");
@@ -1090,7 +1090,7 @@ async function triggerAutoCalculateShifts() {
     }
     
     try {
-        const res = await apiFetch(`${API_BASE}/payroll/calculate-shifts?cashier=${encodeURIComponent(cashier)}&period=${period}`);
+        const res = await ambilDataApi(`${API_BASE}/payroll/calculate-shifts?cashier=${encodeURIComponent(cashier)}&period=${period}`);
         if (shiftsInput) {
             shiftsInput.value = res.total_shifts || 0;
             shiftsInput.placeholder = "Contoh: 22";
@@ -1098,14 +1098,14 @@ async function triggerAutoCalculateShifts() {
         }
     } catch (e) {
         console.error(e);
-        showToast("Gagal menghitung shift otomatis: " + e.message, "danger");
+        tampilkanToast("Gagal menghitung shift otomatis: " + e.message, "danger");
         if (shiftsInput) {
             shiftsInput.placeholder = "Gagal memuat";
         }
     }
 }
 
-function populatePayrollCashierSelect() {
+function isiPilihanKasirPenggajian() {
     const sel = document.getElementById("payroll-form-cashier");
     if (!sel) return;
     sel.innerHTML = "";
@@ -1120,10 +1120,10 @@ window.recalcPayroll = function() {
     const rate   = parseInt(document.getElementById("payroll-form-rate")?.value)   || 0;
     const shifts = parseInt(document.getElementById("payroll-form-shifts")?.value) || 0;
     const el = document.getElementById("payroll-total-display");
-    if (el) el.textContent = formatIDR(rate * shifts);
+    if (el) el.textContent = formatRupiah(rate * shifts);
 }
 
-function updatePayrollMetrics() {
+function perbaruiMetrikPenggajian() {
     let totalAmount = 0;
     let paidCount = 0;
     let unpaidCount = 0;
@@ -1141,13 +1141,13 @@ function updatePayrollMetrics() {
     const cEl = document.getElementById("payroll-stat-count");
     const pEl = document.getElementById("payroll-stat-paid");
     const uEl = document.getElementById("payroll-stat-unpaid");
-    if (tEl) tEl.textContent = formatIDR(totalAmount);
+    if (tEl) tEl.textContent = formatRupiah(totalAmount);
     if (cEl) cEl.textContent = uniqueCashiers.size;
     if (pEl) pEl.textContent = paidCount;
     if (uEl) uEl.textContent = unpaidCount;
 }
 
-function renderPayrollTable() {
+function tampilkanTabelPenggajian() {
     const tbody = document.getElementById("payroll-table-tbody");
     if (!tbody) return;
     tbody.innerHTML = "";
@@ -1169,47 +1169,47 @@ function renderPayrollTable() {
         tr.innerHTML = `
             <td><strong>${p.cashier}</strong></td>
             <td>${periodLabel}</td>
-            <td>${formatIDR(p.ratePerShift || 75000)}</td>
+            <td>${formatRupiah(p.ratePerShift || 75000)}</td>
             <td style="text-align:center"><strong>${p.totalShifts || 0}</strong> shift</td>
-            <td><strong>${formatIDR(p.totalSalary)}</strong></td>
+            <td><strong>${formatRupiah(p.totalSalary)}</strong></td>
             <td style="text-align:center">
-                <button class="btn-secondary"  onclick="editPayroll(${p.id})"     style="padding:6px 10px;font-size:11px;margin-right:4px"><i class="fa-solid fa-pencil"></i> Edit</button>
+                <button class="btn-secondary"  onclick="editPenggajian(${p.id})"     style="padding:6px 10px;font-size:11px;margin-right:4px"><i class="fa-solid fa-pencil"></i> Edit</button>
                 <button class="btn-slip-send"  onclick="openSlipGaji(${p.id})"   style="margin-right:4px"><i class="fa-solid fa-envelope"></i> Kirim</button>
                 <button class="btn-danger"     onclick="deletePayroll(${p.id})"  style="padding:6px 10px;font-size:11px"><i class="fa-solid fa-trash"></i></button>
             </td>
         `;
         tbody.appendChild(tr);
     });
-    updatePayrollMetrics();
+    perbaruiMetrikPenggajian();
 }
 
-window.editPayroll = function(id) {
+window.editPenggajian = function(id) {
     const p = PAYROLL.find(x => x.id === id);
     if (!p) return;
-    populatePayrollCashierSelect();
+    isiPilihanKasirPenggajian();
     document.getElementById("payroll-form-id").value       = p.id;
     document.getElementById("payroll-form-cashier").value  = p.cashier;
     document.getElementById("payroll-form-period").value   = p.period;
     document.getElementById("payroll-form-rate").value     = p.ratePerShift || 75000;
     document.getElementById("payroll-form-shifts").value   = p.totalShifts || 0;
-    document.getElementById("payroll-total-display").textContent = formatIDR(p.totalSalary);
+    document.getElementById("payroll-total-display").textContent = formatRupiah(p.totalSalary);
     document.getElementById("payroll-modal-title").textContent   = "Edit Data Gaji Kasir";
-    openModal("payroll-modal");
+    bukaModal("payroll-modal");
 }
 
 window.deletePayroll = async function(id) {
     if (!confirm("Apakah Anda yakin ingin menghapus data penggajian ini?")) return;
     try {
-        await apiFetch(`${API_BASE}/payroll/${id}`, { method: 'DELETE' });
-        showToast("Data penggajian berhasil dihapus!", "success");
-        await loadPayroll();
-        renderPayrollTable();
+        await ambilDataApi(`${API_BASE}/payroll/${id}`, { method: 'DELETE' });
+        tampilkanToast("Data penggajian berhasil dihapus!", "success");
+        await muatPenggajian();
+        tampilkanTabelPenggajian();
     } catch(e) {
-        showToast("Gagal menghapus data penggajian: " + e.message, "danger");
+        tampilkanToast("Gagal menghapus data penggajian: " + e.message, "danger");
     }
 }
 
-async function handlePayrollSubmit(e) {
+async function tanganiKirimPenggajian(e) {
     e.preventDefault();
     const idVal       = document.getElementById("payroll-form-id").value;
     const cashier     = document.getElementById("payroll-form-cashier").value;
@@ -1222,26 +1222,26 @@ async function handlePayrollSubmit(e) {
     
     try {
         if (idVal) {
-            await apiFetch(`${API_BASE}/payroll/${idVal}`, {
+            await ambilDataApi(`${API_BASE}/payroll/${idVal}`, {
                 method: 'PUT',
                 body: JSON.stringify(payload)
             });
-            showToast("Data penggajian berhasil diperbarui!", "success");
+            tampilkanToast("Data penggajian berhasil diperbarui!", "success");
         } else {
-            await apiFetch(`${API_BASE}/payroll`, {
+            await ambilDataApi(`${API_BASE}/payroll`, {
                 method: 'POST',
                 body: JSON.stringify(payload)
             });
-            showToast("Data penggajian baru berhasil ditambahkan!", "success");
+            tampilkanToast("Data penggajian baru berhasil ditambahkan!", "success");
         }
-        closeModal("payroll-modal");
-        await loadPayroll();
-        renderPayrollTable();
+        tutupModal("payroll-modal");
+        await muatPenggajian();
+        tampilkanTabelPenggajian();
     } catch(e) {
-        showToast("Gagal menyimpan data penggajian: " + e.message, "danger");
+        tampilkanToast("Gagal menyimpan data penggajian: " + e.message, "danger");
     }
 }
-window.handlePayrollSubmit = handlePayrollSubmit;
+window.tanganiKirimPenggajian = tanganiKirimPenggajian;
 
 // ============================================================
 // SLIP GAJI & KIRIM EMAIL
@@ -1260,9 +1260,9 @@ window.openSlipGaji = function(id) {
     document.getElementById("slip-cashier-email").textContent = cashierEmail;
     document.getElementById("slip-period").textContent        = periodLabel;
     document.getElementById("slip-issued-date").textContent   = issuedDate;
-    document.getElementById("slip-rate").textContent          = formatIDR(p.ratePerShift || 75000);
+    document.getElementById("slip-rate").textContent          = formatRupiah(p.ratePerShift || 75000);
     document.getElementById("slip-shifts").textContent        = `${p.totalShifts || 0} shift`;
-    document.getElementById("slip-total").textContent         = formatIDR(p.totalSalary);
+    document.getElementById("slip-total").textContent         = formatRupiah(p.totalSalary);
 
     const preview     = document.getElementById("bukti-tf-preview");
     const placeholder = document.getElementById("bukti-tf-placeholder");
@@ -1277,13 +1277,13 @@ window.openSlipGaji = function(id) {
     }
     if (fileInput) fileInput.value = "";
     _currentSlipData = { p, cashierEmail, periodLabel, issuedDate };
-    openModal("slip-gaji-modal");
+    bukaModal("slip-gaji-modal");
 }
 
 window.handleBuktiTFUpload = function(input) {
     const file = input.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { showToast("Ukuran file maksimal 5MB!", "warning"); return; }
+    if (file.size > 5 * 1024 * 1024) { tampilkanToast("Ukuran file maksimal 5MB!", "warning"); return; }
     const reader = new FileReader();
     reader.onload = async function(e) {
         const dataUrl     = e.target.result;
@@ -1294,7 +1294,7 @@ window.handleBuktiTFUpload = function(input) {
         if (!_currentSlipData) return;
         
         try {
-            await apiFetch(`${API_BASE}/payroll/${_currentSlipData.p.id}/upload-bukti`, {
+            await ambilDataApi(`${API_BASE}/payroll/${_currentSlipData.p.id}/upload-bukti`, {
                 method: 'POST',
                 body: JSON.stringify({ buktiTF: dataUrl })
             });
@@ -1302,13 +1302,13 @@ window.handleBuktiTFUpload = function(input) {
             preview.src = dataUrl; preview.classList.remove("hidden");
             placeholder.style.display = "none"; hapusBtn.classList.remove("hidden");
             
-            await loadPayroll();
+            await muatPenggajian();
             const updatedP = PAYROLL.find(x => x.id === _currentSlipData.p.id);
             if (updatedP) _currentSlipData.p = updatedP;
             
-            showToast("Bukti transfer berhasil diupload!", "success");
+            tampilkanToast("Bukti transfer berhasil diupload!", "success");
         } catch(err) {
-            showToast("Gagal mengupload bukti transfer: " + err.message, "danger");
+            tampilkanToast("Gagal mengupload bukti transfer: " + err.message, "danger");
         }
     };
     reader.readAsDataURL(file);
@@ -1322,26 +1322,26 @@ window.hapusBuktiTF = async function() {
     const fileInput   = document.getElementById("bukti-tf-file-input");
     
     try {
-        await apiFetch(`${API_BASE}/payroll/${_currentSlipData.p.id}/bukti`, { method: 'DELETE' });
+        await ambilDataApi(`${API_BASE}/payroll/${_currentSlipData.p.id}/bukti`, { method: 'DELETE' });
         
         preview.src = ""; preview.classList.add("hidden");
         placeholder.style.display = "flex"; hapusBtn.classList.add("hidden");
         if (fileInput) fileInput.value = "";
         
-        await loadPayroll();
+        await muatPenggajian();
         const updatedP = PAYROLL.find(x => x.id === _currentSlipData.p.id);
         if (updatedP) _currentSlipData.p = updatedP;
         
-        showToast("Bukti transfer dihapus.", "success");
+        tampilkanToast("Bukti transfer dihapus.", "success");
     } catch(err) {
-        showToast("Gagal menghapus bukti transfer: " + err.message, "danger");
+        tampilkanToast("Gagal menghapus bukti transfer: " + err.message, "danger");
     }
 }
 
 window.sendSlipEmail = async function() {
     if (!_currentSlipData) return;
     const { p, cashierEmail } = _currentSlipData;
-    if (cashierEmail === "(email tidak terdaftar)") { showToast("Email kasir tidak terdaftar!", "warning"); return; }
+    if (cashierEmail === "(email tidak terdaftar)") { tampilkanToast("Email kasir tidak terdaftar!", "warning"); return; }
     
     const btn = document.getElementById("btn-send-slip-email");
     const originalText = btn ? btn.innerHTML : "Kirim Slip Email";
@@ -1351,13 +1351,13 @@ window.sendSlipEmail = async function() {
     }
     
     try {
-        const result = await apiFetch(`${API_BASE}/payroll/${p.id}/send-email`, {
+        const result = await ambilDataApi(`${API_BASE}/payroll/${p.id}/send-email`, {
             method: "POST"
         });
-        showToast(result.message || "Slip gaji berhasil dikirim ke email!", "success");
+        tampilkanToast(result.message || "Slip gaji berhasil dikirim ke email!", "success");
     } catch (err) {
         console.error(err);
-        showToast("Gagal mengirim slip gaji: " + err.message, "danger");
+        tampilkanToast("Gagal mengirim slip gaji: " + err.message, "danger");
     } finally {
         if (btn) {
             btn.removeAttribute("disabled");
@@ -1369,16 +1369,16 @@ window.sendSlipEmail = async function() {
 // ============================================================
 // UTILITIES
 // ============================================================
-function formatIDR(amount) {
+function formatRupiah(amount) {
     return new Intl.NumberFormat("id-ID", {
         style: "currency", currency: "IDR", minimumFractionDigits: 0
     }).format(amount).replace("IDR", "Rp");
 }
 
-window.openModal  = function(id) { document.getElementById(id)?.classList.add("active"); }
-window.closeModal = function(id) { document.getElementById(id)?.classList.remove("active"); }
+window.bukaModal  = function(id) { document.getElementById(id)?.classList.add("active"); }
+window.tutupModal = function(id) { document.getElementById(id)?.classList.remove("active"); }
 
-function showToast(message, type = "info") {
+function tampilkanToast(message, type = "info") {
     const container = document.getElementById("toast-container");
     if (!container) return;
     const icons = { success:"fa-circle-check", warning:"fa-triangle-exclamation", danger:"fa-circle-xmark", error:"fa-circle-xmark", info:"fa-circle-info" };
@@ -1390,7 +1390,7 @@ function showToast(message, type = "info") {
 }
 
 // Generic Excel Export Function (CSV with UTF-8 BOM for Excel compatibility)
-function exportToExcel(filename, headers, rows) {
+function eksporKeExcel(filename, headers, rows) {
     let csvContent = "sep=,\n"; // tell Excel to use comma separator
     csvContent += headers.join(",") + "\n";
     rows.forEach(row => {
@@ -1417,10 +1417,10 @@ function exportToExcel(filename, headers, rows) {
 }
 
 // Generic PDF Print Function
-function printReportHTML(title, headers, rows) {
+function cetakLaporanHTML(title, headers, rows) {
     const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) {
-        showToast("Pop-up blocker aktif! Mohon izinkan pop-up untuk mencetak PDF.", "warning");
+        tampilkanToast("Pop-up blocker aktif! Mohon izinkan pop-up untuk mencetak PDF.", "warning");
         return;
     }
     
@@ -1541,7 +1541,7 @@ function printReportHTML(title, headers, rows) {
     printWindow.document.close();
 }
 
-function exportAbsensiExcel() {
+function eksporAbsensiKeExcel() {
     const searchVal  = (document.getElementById("absensi-search")?.value || "").toLowerCase();
     const filterDate = document.getElementById("absensi-filter-date")?.value || "";
     const filtered   = ATTENDANCES.filter(att => {
@@ -1559,11 +1559,11 @@ function exportAbsensiExcel() {
         att.status || '-'
     ]);
 
-    exportToExcel("Laporan_Kehadiran_Kasir.csv", headers, rows);
-    showToast("Laporan Kehadiran Kasir berhasil diexport ke Excel!", "success");
+    eksporKeExcel("Laporan_Kehadiran_Kasir.csv", headers, rows);
+    tampilkanToast("Laporan Kehadiran Kasir berhasil diexport ke Excel!", "success");
 }
 
-function exportAbsensiPdf() {
+function eksporAbsensiKePdf() {
     const searchVal  = (document.getElementById("absensi-search")?.value || "").toLowerCase();
     const filterDate = document.getElementById("absensi-filter-date")?.value || "";
     const filtered   = ATTENDANCES.filter(att => {
@@ -1581,10 +1581,10 @@ function exportAbsensiPdf() {
         att.status || '-'
     ]);
 
-    printReportHTML("LAPORAN KEHADIRAN KASIR", headers, rows);
+    cetakLaporanHTML("LAPORAN KEHADIRAN KASIR", headers, rows);
 }
 
-function exportPayrollExcel() {
+function eksporPenggajianKeExcel() {
     const searchVal   = (document.getElementById("payroll-search")?.value   || "").toLowerCase();
     const filterMonth = document.getElementById("payroll-filter-month")?.value || "";
     const filtered    = PAYROLL.filter(p =>
@@ -1596,16 +1596,16 @@ function exportPayrollExcel() {
     const rows = filtered.map(p => [
         p.cashier || '-',
         p.period || '-',
-        formatIDR(p.ratePerShift || 75000),
+        formatRupiah(p.ratePerShift || 75000),
         p.totalShifts || 0,
-        formatIDR(p.totalSalary || 0)
+        formatRupiah(p.totalSalary || 0)
     ]);
 
-    exportToExcel("Laporan_Gaji_Kasir.csv", headers, rows);
-    showToast("Laporan Penggajian Kasir berhasil diexport ke Excel!", "success");
+    eksporKeExcel("Laporan_Gaji_Kasir.csv", headers, rows);
+    tampilkanToast("Laporan Penggajian Kasir berhasil diexport ke Excel!", "success");
 }
 
-function exportReportExcel() {
+function eksporLaporanKeExcel() {
     const searchVal = (document.getElementById("report-search")?.value || "").toLowerCase();
     const dateStart = document.getElementById("report-date-start")?.value || "";
     const dateEnd   = document.getElementById("report-date-end")?.value   || "";
@@ -1632,18 +1632,18 @@ function exportReportExcel() {
             txId,
             dateStr,
             tx.nama_kasir || '-',
-            formatIDR(sub),
-            formatIDR(total),
+            formatRupiah(sub),
+            formatRupiah(total),
             tx.metode_pembayaran || '-',
             "Selesai"
         ];
     });
 
-    exportToExcel("Laporan_Penjualan_Cafe.csv", headers, rows);
-    showToast("Laporan Penjualan berhasil diexport ke Excel!", "success");
+    eksporKeExcel("Laporan_Penjualan_Cafe.csv", headers, rows);
+    tampilkanToast("Laporan Penjualan berhasil diexport ke Excel!", "success");
 }
 
-function exportReportPdf() {
+function eksporLaporanKePdf() {
     const searchVal = (document.getElementById("report-search")?.value || "").toLowerCase();
     const dateStart = document.getElementById("report-date-start")?.value || "";
     const dateEnd   = document.getElementById("report-date-end")?.value   || "";
@@ -1670,17 +1670,17 @@ function exportReportPdf() {
             txId,
             dateStr,
             tx.nama_kasir || '-',
-            formatIDR(sub),
-            formatIDR(total),
+            formatRupiah(sub),
+            formatRupiah(total),
             tx.metode_pembayaran || '-',
             "Selesai"
         ];
     });
 
-    printReportHTML("LAPORAN DETIL TRANSAKSI PENJUALAN", headers, rows);
+    cetakLaporanHTML("LAPORAN DETIL TRANSAKSI PENJUALAN", headers, rows);
 }
 
-async function sendEmailReport() {
+async function kirimLaporanEmail() {
     const btn = document.getElementById("btn-email-report");
     if (!btn) return;
     
@@ -1692,7 +1692,7 @@ async function sendEmailReport() {
     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
     
     try {
-        const result = await apiFetch(`${API_BASE}/report/email`, {
+        const result = await ambilDataApi(`${API_BASE}/report/email`, {
             method: "POST",
             body: JSON.stringify({
                 start_date: dateStart,
@@ -1701,18 +1701,27 @@ async function sendEmailReport() {
         });
         
         if (result.status === "warning") {
-            showToast(result.message, "warning");
+            tampilkanToast(result.message, "warning");
         } else {
-            showToast(result.message || "Laporan penjualan berhasil dikirim ke email!", "success");
+            tampilkanToast(result.message || "Laporan penjualan berhasil dikirim ke email!", "success");
         }
     } catch (e) {
         console.error(e);
-        showToast(e.message || "Gagal mengirimkan laporan ke email.", "danger");
+        tampilkanToast(e.message || "Gagal mengirimkan laporan ke email.", "danger");
     } finally {
         btn.removeAttribute("disabled");
         btn.innerHTML = originalText;
     }
 }
 
-window.selectTemplateImage  = function() {};
-window.updateMenuImagePreview = function() {};
+window.pilihGambarTemplat  = function() {};
+window.perbaruiPratinjauGambarMenu = function() {};
+
+
+// ============================================================
+// ALIASES KOMPATIBILITAS (UNTUK KEAMANAN 100%)
+// ============================================================
+window.openModal = window.bukaModal;
+window.closeModal = window.tutupModal;
+window.showToast = window.tampilkanToast;
+window.formatIDR = window.formatRupiah;
