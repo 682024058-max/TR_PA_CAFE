@@ -1,33 +1,36 @@
-<!-- templates/kasir/riwayattransaksi.html -->
-<!-- ================= 3. HALAMAN RIWAYAT TRANSAKSI ================= -->
-<div class="riwayat-filter-header compact-filter">
-    <div class="filter-group search-group">
-        <label for="tx-search">Cari Transaksi</label>
-        <div class="search-box">
-            <i class="fa-solid fa-magnifying-glass"></i>
-            <input type="text" id="tx-search" placeholder="Cari ID transaksi...">
+<section id="view-riwayat" class="app-view">
+    <div class="dashboard-card riwayat-card">
+        
+        <!-- Filters - Horizontal Layout -->
+        <div class="filter-container">
+            <div class="filter-search">
+                <label>Cari Transaksi</label>
+                <div class="search-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="tx-search" placeholder="Cari ID transaksi, nama kasir...">
+                </div>
+            </div>
+            
+            <div class="filter-date">
+                <label>Tanggal</label>
+                <input type="date" id="tx-filter-date">
+            </div>
+
+            <!-- Dropdown Metode (Debit sudah dihapus) -->
+            <div class="filter-method">
+                <label>Metode</label>
+                <select id="tx-filter-payment">
+                    <option value="all">Semua</option>
+                    <option value="Cash">Cash</option>
+                    <option value="QRIS">QRIS</option>
+                </select>
+            </div>
+            
+            <button class="btn-reset-filter" id="btn-reset-tx-filters">
+                <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
         </div>
-    </div>
-    
-    <div class="filter-group">
-        <label for="tx-filter-date">Tanggal</label>
-        <input type="date" id="tx-filter-date">
-    </div>
-    
-    <div class="filter-group">
-        <label for="tx-filter-payment">Metode</label>
-        <select id="tx-filter-payment">
-            <option value="all">Semua</option>
-            <option value="Cash">Cash</option>
-            <option value="QRIS">QRIS</option>
-            <option value="Debit">Debit</option>
-        </select>
-    </div>
-    
-    <button class="btn-secondary btn-reset-filters" id="btn-reset-tx-filters">
-        <i class="fa-solid fa-rotate-left"></i> Reset
-    </button>
-</div>
+        
         <!-- History Table -->
         <div class="card-body">
             <div class="table-responsive">
@@ -49,5 +52,6 @@
                 </table>
             </div>
         </div>
+        
     </div>
 </section>
