@@ -1,9 +1,3 @@
-# =======================================================
-# KOPI SIBEI - POS CAFE BACKEND — DISESUAIKAN STRUKTUR DB
-# Tabel nyata: users, kategori, products, transaksi,
-#              detail_transaksi, absensi
-# =======================================================
-
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import pymysql, pymysql.cursors, decimal
