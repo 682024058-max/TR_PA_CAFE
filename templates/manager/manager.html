@@ -118,10 +118,10 @@
         <div class="modal-content menu-modal-slim">
             <div class="modal-header">
                 <h2 id="menu-modal-title">Tambah Menu Baru</h2>
-                <button class="btn-close-modal" onclick="closeModal('menu-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('menu-modal')">&times;</button>
             </div>
 
-            <form id="menu-form" onsubmit="handleMenuSubmit(event)">
+            <form id="menu-form" onsubmit="tanganiKirimMenu(event)">
                 <input type="hidden" id="menu-form-id">
                 <input type="hidden" id="menu-form-image">
 
@@ -137,7 +137,7 @@
                                 <span>Klik untuk unggah foto</span>
                             </div>
                         </div>
-                        <input type="file" id="menu-file-input" accept="image/*" style="display:none" onchange="handleMenuFileUpload(this)">
+                        <input type="file" id="menu-file-input" accept="image/*" style="display:none" onchange="tanganiUnggahBerkasMenu(this)">
                     </div>
 
                     <!-- Nama Menu -->
@@ -172,7 +172,7 @@
                 </div>
 
                 <div class="modal-footer menu-modal-footer">
-                    <button type="button" class="btn-menu-cancel" onclick="closeModal('menu-modal')">Batal</button>
+                    <button type="button" class="btn-menu-cancel" onclick="tutupModal('menu-modal')">Batal</button>
                     <button type="submit" class="btn-menu-save" id="btn-save-menu">Simpan Menu</button>
                 </div>
             </form>
@@ -185,10 +185,10 @@
         <div class="modal-content sub-modal-content">
             <div class="modal-header">
                 <h2 id="category-modal-title">Tambah Kategori Baru</h2>
-                <button class="btn-close-modal" onclick="closeModal('category-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('category-modal')">&times;</button>
             </div>
             
-            <form id="category-form" onsubmit="handleCategorySubmit(event)">
+            <form id="category-form" onsubmit="tanganiKirimKategori(event)">
                 <input type="hidden" id="category-form-id">
                 
                 <div class="card-body">
@@ -196,14 +196,10 @@
                         <label for="category-form-name">Nama Kategori <span class="required">*</span></label>
                         <input type="text" id="category-form-name" required placeholder="Contoh: Coffee, Non Coffee, Snack, Dessert">
                     </div>
-                    <div class="form-group mt-12">
-                        <label for="category-form-icon">Nama Kode FontAwesome Icon <span class="required">*</span></label>
-                        <input type="text" id="category-form-icon" required placeholder="Contoh: fa-mug-hot, fa-cookie, fa-ice-cream">
-                    </div>
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeModal('category-modal')">Batal</button>
+                    <button type="button" class="btn-secondary" onclick="tutupModal('category-modal')">Batal</button>
                     <button type="submit" class="btn-primary">
                         <i class="fa-solid fa-save"></i> Simpan Kategori
                     </button>
@@ -217,10 +213,10 @@
         <div class="modal-content sub-modal-content">
             <div class="modal-header">
                 <h2 id="cashier-modal-title">Buat Akun Kasir Baru</h2>
-                <button class="btn-close-modal" onclick="closeModal('cashier-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('cashier-modal')">&times;</button>
             </div>
             
-            <form id="cashier-form" onsubmit="handleCashierSubmit(event)">
+            <form id="cashier-form" onsubmit="tanganiKirimKasir(event)">
                 <input type="hidden" id="cashier-form-id">
                 
                 <div class="card-body">
@@ -258,7 +254,7 @@
                 </div>
                 
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeModal('cashier-modal')">Batal</button>
+                    <button type="button" class="btn-secondary" onclick="tutupModal('cashier-modal')">Batal</button>
                     <button type="submit" class="btn-primary">
                         <i class="fa-solid fa-save"></i> Simpan Akun Kasir
                     </button>
@@ -272,7 +268,7 @@
         <div class="modal-content tx-detail-content">
             <div class="modal-header">
                 <h2>Rincian Transaksi POS</h2>
-                <button class="btn-close-modal" onclick="closeModal('tx-detail-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('tx-detail-modal')">&times;</button>
             </div>
             
             <div class="tx-detail-body">
@@ -321,11 +317,11 @@
                         <span>Subtotal:</span>
                         <span id="tx-detail-subtotal">Rp 0</span>
                     </div>
-                    <div class="total-line">
+                    <div class="total-line" style="display: none;">
                         <span>Pajak (PPN 10%):</span>
                         <span id="tx-detail-tax">Rp 0</span>
                     </div>
-                    <div class="total-line">
+                    <div class="total-line" style="display: none;">
                         <span>Service Charge (5%):</span>
                         <span id="tx-detail-service">Rp 0</span>
                     </div>
@@ -337,7 +333,7 @@
             </div>
             
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeModal('tx-detail-modal')">Tutup</button>
+                <button class="btn-secondary" onclick="tutupModal('tx-detail-modal')">Tutup</button>
             </div>
         </div>
     </div>
@@ -347,7 +343,7 @@
         <div class="modal-content sub-modal-content">
             <div class="modal-header">
                 <h2>Rincian Kehadiran Kasir</h2>
-                <button class="btn-close-modal" onclick="closeModal('absensi-detail-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('absensi-detail-modal')">&times;</button>
             </div>
             
             <div class="card-body">
@@ -368,6 +364,20 @@
                         <label>Jam Pulang</label>
                         <h4 id="abs-detail-out">16:00:00</h4>
                     </div>
+                    <div class="info-block mt-12">
+                        <label>Foto Masuk</label>
+                        <div id="abs-detail-photo-in-container" style="margin-top: 8px;">
+                            <img id="abs-detail-photo-in" src="" style="max-width: 100%; max-height: 120px; border-radius: 6px; border: 1px solid #e1dcd6; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" alt="Foto Masuk">
+                            <span id="abs-detail-photo-in-placeholder" style="color: #8e7c77; font-style: italic; font-size: 13px;">Tidak ada foto</span>
+                        </div>
+                    </div>
+                    <div class="info-block mt-12">
+                        <label>Foto Pulang</label>
+                        <div id="abs-detail-photo-out-container" style="margin-top: 8px;">
+                            <img id="abs-detail-photo-out" src="" style="max-width: 100%; max-height: 120px; border-radius: 6px; border: 1px solid #e1dcd6; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" alt="Foto Pulang">
+                            <span id="abs-detail-photo-out-placeholder" style="color: #8e7c77; font-style: italic; font-size: 13px;">Tidak ada foto</span>
+                        </div>
+                    </div>
                     <div class="info-block mt-12 span-2">
                         <label>Status Kehadiran</label>
                         <h4 id="abs-detail-status"><span class="badge badge-success">Hadir</span></h4>
@@ -376,7 +386,7 @@
             </div>
             
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeModal('absensi-detail-modal')">Tutup</button>
+                <button class="btn-secondary" onclick="tutupModal('absensi-detail-modal')">Tutup</button>
             </div>
         </div>
     </div>
@@ -386,10 +396,10 @@
         <div class="modal-content payroll-modal-content">
             <div class="modal-header">
                 <h2 id="payroll-modal-title">Tambah Data Gaji Kasir</h2>
-                <button class="btn-close-modal" onclick="closeModal('payroll-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('payroll-modal')">&times;</button>
             </div>
 
-            <form id="payroll-form" onsubmit="handlePayrollSubmit(event)">
+            <form id="payroll-form" onsubmit="tanganiKirimPenggajian(event)">
                 <input type="hidden" id="payroll-form-id">
 
                 <div class="card-body">
@@ -430,7 +440,7 @@
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn-secondary" onclick="closeModal('payroll-modal')">Batal</button>
+                    <button type="button" class="btn-secondary" onclick="tutupModal('payroll-modal')">Batal</button>
                     <button type="submit" class="btn-primary">
                         <i class="fa-solid fa-save"></i> Simpan Data Gaji
                     </button>
@@ -444,7 +454,7 @@
         <div class="modal-content slip-gaji-content">
             <div class="modal-header">
                 <h2><i class="fa-solid fa-file-invoice-dollar"></i> Slip Gaji Kasir</h2>
-                <button class="btn-close-modal" onclick="closeModal('slip-gaji-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('slip-gaji-modal')">&times;</button>
             </div>
 
             <div class="slip-gaji-body">
@@ -522,7 +532,7 @@
             </div>
 
             <div class="modal-footer slip-gaji-footer">
-                <button type="button" class="btn-secondary" onclick="closeModal('slip-gaji-modal')">Tutup</button>
+                <button type="button" class="btn-secondary" onclick="tutupModal('slip-gaji-modal')">Tutup</button>
                 <button type="button" class="btn-slip-email" id="btn-send-slip-email" onclick="sendSlipEmail()">
                     <i class="fa-solid fa-paper-plane"></i> Kirim via Email
                 </button>
@@ -540,7 +550,7 @@
             <h2 style="text-align: center;">Konfirmasi Keluar</h2>
             <p style="text-align: center;">Apakah Anda yakin ingin keluar dari sistem management dashboard Kopi Sibei ini?</p>
             <div class="modal-footer justify-center" style="border-top: none; padding-top: 0;">
-                <button class="btn-secondary" onclick="closeModal('logout-confirm-modal')" style="width: 100px;">Batal</button>
+                <button class="btn-secondary" onclick="tutupModal('logout-confirm-modal')" style="width: 100px;">Batal</button>
                 <button class="btn-danger" id="btn-confirm-logout" style="width: 100px;">Keluar</button>
             </div>
         </div>

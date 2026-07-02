@@ -17,7 +17,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Custom CSS File -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/kasir.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/kasir.css') }}?v=1.1">
 </head>
 <body>
     <!-- Toast Notification Container -->
@@ -116,7 +116,7 @@
         <div class="modal-content payment-modal-content">
             <div class="modal-header">
                 <h2>Pilih Metode & Proses Pembayaran</h2>
-                <button class="btn-close-modal" onclick="closeModal('payment-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('payment-modal')">&times;</button>
             </div>
             
             <div class="payment-modal-body">
@@ -172,15 +172,10 @@
                             <span>QRIS E-Wallet</span>
                         </label>
                         
-                        <label class="method-card" data-method="Debit">
-                            <input type="radio" name="payment_method" value="Debit">
-                            <i class="fa-solid fa-credit-card"></i>
-                            <span>Debit / Credit</span>
-                        </label>
                     </div>
 
                     <div class="payment-action-buttons">
-                        <button class="btn-secondary" onclick="closeModal('payment-modal')">Batal</button>
+                        <button class="btn-secondary" onclick="tutupModal('payment-modal')">Batal</button>
                         <button class="btn-primary" id="btn-process-payment">
                             <i class="fa-solid fa-square-check"></i> Proses Pembayaran
                         </button>
@@ -262,11 +257,11 @@
                             <span>Subtotal:</span>
                             <span id="receipt-subtotal">Rp0</span>
                         </div>
-                        <div class="calc-row">
+                        <div class="calc-row" style="display: none;">
                             <span>PPN (10%):</span>
                             <span id="receipt-tax">Rp0</span>
                         </div>
-                        <div class="calc-row">
+                        <div class="calc-row" style="display: none;">
                             <span>Service Charge (5%):</span>
                             <span id="receipt-service">Rp0</span>
                         </div>
@@ -314,7 +309,7 @@
 
             <!-- Receipt Actions -->
             <div class="modal-footer hide-on-print">
-                <button class="btn-secondary" id="btn-close-receipt-footer" onclick="closeModal('receipt-modal')">Tutup</button>
+                <button class="btn-secondary" id="btn-close-receipt-footer" onclick="tutupModal('receipt-modal')">Tutup</button>
                 <button class="btn-primary" id="btn-print-receipt">
                     <i class="fa-solid fa-print"></i> Cetak Struk
                 </button>
@@ -327,7 +322,7 @@
         <div class="modal-content tx-detail-content">
             <div class="modal-header">
                 <h2>Detail Transaksi Penjualan</h2>
-                <button class="btn-close-modal" onclick="closeModal('tx-detail-modal')">&times;</button>
+                <button class="btn-close-modal" onclick="tutupModal('tx-detail-modal')">&times;</button>
             </div>
 
             <div class="tx-detail-body">
@@ -376,11 +371,11 @@
                         <span>Subtotal</span>
                         <span id="detail-tx-subtotal">Rp0</span>
                     </div>
-                    <div class="total-line">
+                    <div class="total-line" style="display: none;">
                         <span>PPN (10%)</span>
                         <span id="detail-tx-tax">Rp0</span>
                     </div>
-                    <div class="total-line">
+                    <div class="total-line" style="display: none;">
                         <span>Service Charge (5%)</span>
                         <span id="detail-tx-service">Rp0</span>
                     </div>
@@ -392,7 +387,7 @@
             </div>
 
             <div class="modal-footer">
-                <button class="btn-secondary" onclick="closeModal('tx-detail-modal')">Tutup</button>
+                <button class="btn-secondary" onclick="tutupModal('tx-detail-modal')">Tutup</button>
                 <button class="btn-primary" id="btn-reprint-from-detail">
                     <i class="fa-solid fa-print"></i> Cetak Ulang Struk
                 </button>
@@ -409,8 +404,42 @@
             <h2>Konfirmasi Keluar</h2>
             <p>Apakah Anda yakin ingin keluar dari sistem kasir.</p>
             <div class="modal-footer justify-center">
-                <button class="btn-secondary" onclick="closeModal('logout-modal')">Batal</button>
+                <button class="btn-secondary" onclick="tutupModal('logout-modal')">Batal</button>
                 <button class="btn-danger" id="btn-confirm-logout">Ya, Keluar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Kamera Absensi -->
+    <div id="camera-modal" class="modal-overlay">
+        <div class="modal-content sub-modal-content" style="max-width: 400px; text-align: center; padding: 24px;">
+            <div class="modal-header" style="justify-content: center; position: relative;">
+                <h3 id="camera-modal-title" style="margin: 0; color: #4a3321; display: flex; align-items: center; gap: 8px; font-weight: 600;">
+                    <i class="fa-solid fa-camera"></i> Ambil Foto Absen
+                </h3>
+                <button class="btn-close-modal" onclick="closeCameraModal()" style="position: absolute; right: 0; top: 50%; transform: translateY(-50%);">&times;</button>
+            </div>
+            
+            <div class="card-body" style="padding: 16px 0;">
+                <div class="camera-stream-container" style="position: relative; width: 100%; max-width: 280px; aspect-ratio: 4/3; margin: 0 auto; background: #1a1a1a; border-radius: 8px; overflow: hidden; border: 2px solid #e1dcd6; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);">
+                    <video id="webcam-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                    <canvas id="webcam-canvas" style="display: none;"></canvas>
+                    <div id="camera-loading-placeholder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #e1dcd6; background: rgba(74,51,33,0.85); flex-direction: column; font-size: 13px;">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 8px; color: #c68a4c;"></i>
+                        Mengaktifkan kamera...
+                    </div>
+                    <div id="camera-error-placeholder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; align-items: center; justify-content: center; color: #ff6b6b; background: rgba(0,0,0,0.9); flex-direction: column; font-size: 11px; padding: 12px; text-align: center;">
+                        <i class="fa-solid fa-triangle-exclamation" style="font-size: 20px; margin-bottom: 6px;"></i>
+                        Akses kamera gagal. Harap pastikan izin kamera diberikan di browser Anda.
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="justify-content: center; gap: 12px; border: none; padding-top: 8px;">
+                <button class="btn-secondary" onclick="closeCameraModal()">Batal</button>
+                <button class="btn-primary" id="btn-capture-absensi" style="padding: 10px 20px;">
+                    <i class="fa-solid fa-check-circle"></i> Ambil Gambar
+                </button>
             </div>
         </div>
     </div>

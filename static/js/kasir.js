@@ -9,7 +9,7 @@
 //            total_jam, status, waktu_dibuat
 // ============================================================
 
-const API_BASE = 'http://127.0.0.1:5000/api';
+const API_BASE = '/api';
 
 // ── Session ──────────────────────────────────────────────────
 let SESSION = { id: null, nama: 'Kasir', role: 'kasir' };
@@ -17,6 +17,7 @@ let SESSION = { id: null, nama: 'Kasir', role: 'kasir' };
 // ── State Global ─────────────────────────────────────────────
 let MENU_ITEMS     = [];
 let transactions   = [];
+let historyTransactions = [];
 let attendanceLogs = [];
 let cart           = [];
 let activeCategory = 'all';
@@ -36,13 +37,18 @@ const KATEGORI_LABEL = {
 };
 
 // ── Header request — WAJIB sertakan X-User-Name ──────────────
-function apiHeaders() {
+function headerApi() {
     return {
         'Content-Type': 'application/json',
         'X-User-Role' : SESSION.role,
         'X-User-Id'   : SESSION.id,
         'X-User-Name' : SESSION.nama   // dipakai absensi (nama_kasir)
     };
+}
+
+// Alias untuk kompatibilitas
+function apiHeaders() {
+    return headerApi();
 }
 
 // ============================================================
@@ -58,14 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
     initAttendanceInteractions();
     initHistoryFilters();
     initGeneralModalTriggers();
-    initReceiptModalClose(); // ← TAMBAHKAN INI untuk close modal struk
+    initReceiptModalClose();
     disableBrowserZooming();
     initChart();
 
     // Load semua data dari database
     loadKategoriDanProduk();
     loadTransaksiHariIni();
-    loadAbsensiHariIni();
+    muatAbsensiHariIni();
     loadRiwayatAbsensi();
 });
 
@@ -76,14 +82,12 @@ function initReceiptModalClose() {
     const btnCloseStruk = document.getElementById('btn-close-struk');
     const receiptModal = document.getElementById('receipt-modal');
 
-    // Close dengan tombol X
     if (btnCloseStruk) {
         btnCloseStruk.addEventListener('click', function() {
             closeModal('receipt-modal');
         });
     }
 
-    // Close saat klik di luar area modal
     if (receiptModal) {
         receiptModal.addEventListener('click', function(e) {
             if (e.target === receiptModal) {
@@ -122,19 +126,18 @@ async function loadKategoriDanProduk() {
         const res  = await fetch(`${API_BASE}/kategori`);
         const data = await res.json();
         if (data.status === 'success') {
-            // Update KATEGORI_LABEL secara dinamis agar menampilkan nama kategori yang cantik
             (data.data || []).forEach(k => {
                 KATEGORI_LABEL[k.id_kategori] = k.nama_kategori;
             });
-            renderCategoryTabs(data.data);
+            tampilkanTabKategori(data.data);
         }
     } catch (e) {
         console.error('Gagal load kategori:', e);
     }
-    loadProducts();
+    muatProduk();
 }
 
-function renderCategoryTabs(list) {
+function tampilkanTabKategori(list) {
     const container = document.querySelector('.category-tabs');
     if (!container) return;
     container.innerHTML = `<button class="category-btn active" data-category="all">Semua</button>`;
@@ -145,14 +148,13 @@ function renderCategoryTabs(list) {
         btn.innerText = k.nama_kategori;
         container.appendChild(btn);
     });
-    initPOSFilters();
+    inisialisasiFilterPOS();
 }
 
 // ============================================================
 //  PRODUK — GET /api/products
-//  Kolom: id_product, nama_product, kategori, harga, icon, warna
 // ============================================================
-async function loadProducts() {
+async function muatProduk() {
     const grid = document.getElementById('menu-grid-container');
     if (grid) grid.innerHTML =
         `<div class="empty-cart-box span-2">
@@ -163,21 +165,20 @@ async function loadProducts() {
         const data = await res.json();
         if (data.status !== 'success') throw new Error(data.message);
 
-        // ── Mapping kolom DB → format internal ──
         MENU_ITEMS = data.data.map(p => ({
             id           : p.id_product,
             name         : p.nama_product,
             price        : Number(p.harga),
-            category     : p.kategori,                          // string enum: coffee, non-coffee, snack, dessert
+            category     : p.kategori,
             nama_kategori: KATEGORI_LABEL[p.kategori] || p.kategori,
-            icon         : p.icon  || 'fa-mug-hot',            // Font Awesome class
+            foto         : p.foto,
             warna        : p.warna || '#4e3629'
         }));
 
-        renderPOSMenu(MENU_ITEMS);
+        tampilkanMenuPOS(MENU_ITEMS);
     } catch (e) {
         console.error('Gagal load produk:', e);
-        showToast('Gagal memuat menu. Pastikan Flask berjalan!', 'danger');
+        tampilkanToast('Gagal memuat menu. Pastikan Flask berjalan!', 'danger');
         if (grid) grid.innerHTML =
             `<div class="empty-cart-box span-2">
                 <i class="fa-solid fa-plug-circle-xmark"></i>
@@ -190,7 +191,7 @@ async function loadProducts() {
 // ============================================================
 //  RENDER MENU GRID
 // ============================================================
-function renderPOSMenu(items) {
+function tampilkanMenuPOS(items) {
     const grid = document.getElementById('menu-grid-container');
     if (!grid) return;
     grid.innerHTML = '';
@@ -209,17 +210,19 @@ function renderPOSMenu(items) {
         const card = document.createElement('div');
         card.className = 'menu-card';
 
-        // icon = nama class FA (e.g. "fa-mug-hot"), bukan URL gambar
+        const photoHtml = item.foto 
+            ? `<img src="${item.foto}" style="width: 100%; height: 100%; object-fit: cover;" alt="${item.name}">` 
+            : `<i class="fa-solid fa-mug-hot" style="font-size:2.4rem; color:${item.warna}"></i>`;
+
         card.innerHTML = `
-            <div class="menu-card-img-wrapper" style="background:${item.warna}1a">
-                <i class="fa-solid ${item.icon}"
-                   style="font-size:2.4rem; color:${item.warna}"></i>
+            <div class="menu-card-img-wrapper" style="background:${item.warna}1a; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                ${photoHtml}
             </div>
             <div class="menu-card-category">${item.nama_kategori}</div>
             <h4 class="menu-card-name">${item.name}</h4>
             <div class="menu-card-footer">
-                <span class="menu-card-price">${formatIDR(item.price)}</span>
-                <button class="btn-add-to-cart" onclick="addItemToCart(${item.id})">
+                <span class="menu-card-price">${formatRupiah(item.price)}</span>
+                <button class="btn-add-to-cart" onclick="tambahItemKeKeranjang(${item.id})">
                     <i class="fa-solid fa-plus"></i>
                 </button>
             </div>`;
@@ -230,7 +233,7 @@ function renderPOSMenu(items) {
 // ============================================================
 //  FILTER MENU
 // ============================================================
-function initPOSFilters() {
+function inisialisasiFilterPOS() {
     const tabContainer = document.querySelector('.category-tabs');
     if (tabContainer) {
         const newTabs = tabContainer.cloneNode(true);
@@ -241,25 +244,25 @@ function initPOSFilters() {
             newTabs.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             activeCategory = btn.getAttribute('data-category');
-            applyMenuFilter();
+            terapkanFilterMenu();
         });
     }
     const searchInput = document.getElementById('menu-search-input');
     if (searchInput) {
         searchInput.addEventListener('input', e => {
             searchQuery = e.target.value;
-            applyMenuFilter();
+            terapkanFilterMenu();
         });
     }
 }
 
-function applyMenuFilter() {
+function terapkanFilterMenu() {
     const filtered = MENU_ITEMS.filter(item => {
         const matchCat    = activeCategory === 'all' || item.category === activeCategory;
         const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
         return matchCat && matchSearch;
     });
-    renderPOSMenu(filtered);
+    tampilkanMenuPOS(filtered);
 }
 
 // ============================================================
@@ -267,21 +270,21 @@ function applyMenuFilter() {
 // ============================================================
 function initCartInteractions() {
     document.getElementById('btn-reset-cart')?.addEventListener('click', () => {
-        if (cart.length > 0) { resetCartState(); showToast('Keranjang dikosongkan', 'success'); }
+        if (cart.length > 0) { aturUlangStatusKeranjang(); tampilkanToast('Keranjang dikosongkan', 'success'); }
     });
 }
 
-window.addItemToCart = function (itemId) {
+window.tambahItemKeKeranjang = function (itemId) {
     const menu = MENU_ITEMS.find(i => i.id === itemId);
     if (!menu) return;
     const existing = cart.find(i => i.id === itemId);
     if (existing) existing.qty += 1;
     else cart.push({ id: menu.id, name: menu.name, price: menu.price, qty: 1 });
-    renderCartList();
-    showToast(`${menu.name} ditambahkan!`, 'success');
+    tampilkanDaftarKeranjang();
+    tampilkanToast(`${menu.name} ditambahkan!`, 'success');
 };
 
-function renderCartList() {
+function tampilkanDaftarKeranjang() {
     const container   = document.getElementById('cart-items-container');
     const checkoutBtn = document.getElementById('btn-pay-checkout');
     if (!container) return;
@@ -297,7 +300,7 @@ function renderCartList() {
         checkoutBtn?.classList.add('disabled');
         checkoutBtn?.setAttribute('disabled','true');
         checkoutBtn?.classList.remove('btn-highlight');
-        updateCartTotals(0, 0, 0, 0);
+        perbaruiTotalKeranjang(0, 0, 0, 0);
         return;
     }
 
@@ -307,17 +310,17 @@ function renderCartList() {
         row.innerHTML = `
             <div class="cart-item-details">
                 <h4 class="cart-item-name">${item.name}</h4>
-                <p class="cart-item-price">${formatIDR(item.price)}</p>
+                <p class="cart-item-price">${formatRupiah(item.price)}</p>
             </div>
             <div class="cart-item-qty-control">
-                <button class="btn-qty" onclick="adjustCartQty(${item.id},-1)">
+                <button class="btn-qty" onclick="sesuaikanJumlahKeranjang(${item.id},-1)">
                     <i class="fa-solid fa-minus"></i></button>
                 <div class="qty-val">${item.qty}</div>
-                <button class="btn-qty" onclick="adjustCartQty(${item.id},1)">
+                <button class="btn-qty" onclick="sesuaikanJumlahKeranjang(${item.id},1)">
                     <i class="fa-solid fa-plus"></i></button>
             </div>
-            <div class="cart-item-subtotal">${formatIDR(item.price * item.qty)}</div>
-            <button class="btn-delete-item" onclick="deleteCartItem(${item.id})">
+            <div class="cart-item-subtotal">${formatRupiah(item.price * item.qty)}</div>
+            <button class="btn-delete-item" onclick="hapusItemKeranjang(${item.id})">
                 <i class="fa-regular fa-trash-can"></i></button>`;
         container.appendChild(row);
     });
@@ -325,41 +328,41 @@ function renderCartList() {
     checkoutBtn?.classList.remove('disabled');
     checkoutBtn?.removeAttribute('disabled');
     checkoutBtn?.classList.add('btn-highlight');
-    calculateCartState();
+    hitungStatusKeranjang();
 }
 
-window.adjustCartQty = function (itemId, change) {
+window.sesuaikanJumlahKeranjang = function (itemId, change) {
     const target = cart.find(i => i.id === itemId);
     if (!target) return;
     target.qty += change;
-    if (target.qty < 1) deleteCartItem(itemId);
-    else renderCartList();
+    if (target.qty < 1) hapusItemKeranjang(itemId);
+    else tampilkanDaftarKeranjang();
 };
 
-window.deleteCartItem = function (itemId) {
+window.hapusItemKeranjang = function (itemId) {
     const idx = cart.findIndex(i => i.id === itemId);
     if (idx > -1) {
         const name = cart[idx].name;
         cart.splice(idx, 1);
-        renderCartList();
-        showToast(`${name} dihapus`, 'warning');
+        tampilkanDaftarKeranjang();
+        tampilkanToast(`${name} dihapus`, 'warning');
     }
 };
 
-function resetCartState() { cart = []; renderCartList(); }
+function aturUlangStatusKeranjang() { cart = []; tampilkanDaftarKeranjang(); }
 
-function calculateCartState() {
+function hitungStatusKeranjang() {
     const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    const tax = Math.round(sub * 0.1);
-    const svc = Math.round(sub * 0.05);
-    updateCartTotals(sub, tax, svc, sub + tax + svc);
+    const tax = 0;
+    const svc = 0;
+    perbaruiTotalKeranjang(sub, tax, svc, sub);
 }
 
-function updateCartTotals(sub, tax, svc, total) {
-    document.getElementById('cart-subtotal').innerText    = formatIDR(sub);
-    document.getElementById('cart-tax').innerText         = formatIDR(tax);
-    document.getElementById('cart-service').innerText     = formatIDR(svc);
-    document.getElementById('cart-grand-total').innerText = formatIDR(total);
+function perbaruiTotalKeranjang(sub, tax, svc, total) {
+    document.getElementById('cart-subtotal').innerText    = formatRupiah(sub);
+    document.getElementById('cart-tax').innerText         = formatRupiah(tax);
+    document.getElementById('cart-service').innerText     = formatRupiah(svc);
+    document.getElementById('cart-grand-total').innerText = formatRupiah(total);
 }
 
 // ============================================================
@@ -373,11 +376,11 @@ function initPaymentInteractions() {
     checkoutBtn?.addEventListener('click', () => {
         if (!cart.length) return;
         const sub   = cart.reduce((s, i) => s + i.price * i.qty, 0);
-        const tax   = Math.round(sub * 0.1);
-        const svc   = Math.round(sub * 0.05);
-        const total = sub + tax + svc;
+        const tax   = 0;
+        const svc   = 0;
+        const total = sub;
 
-        document.getElementById('payment-grand-total').innerText = formatIDR(total);
+        document.getElementById('payment-grand-total').innerText = formatRupiah(total);
         document.getElementById('payment-grand-total').setAttribute('data-amount', total);
         cashInput.value = '';
         document.getElementById('payment-change').innerText = 'Rp0';
@@ -387,7 +390,7 @@ function initPaymentInteractions() {
         document.querySelector('.method-card[data-method="Cash"]').classList.add('active');
         document.getElementById('cash-calculator-section').classList.remove('hidden');
         document.getElementById('change-display-box').classList.remove('hidden');
-        openModal('payment-modal');
+        bukaModal('payment-modal');
         setTimeout(() => cashInput.focus(), 200);
     });
 
@@ -396,12 +399,12 @@ function initPaymentInteractions() {
             const total = parseInt(document.getElementById('payment-grand-total').getAttribute('data-amount'));
             cashInput.value = btn.getAttribute('data-amount') === 'exact'
                 ? total : parseInt(btn.getAttribute('data-amount'));
-            calculateChange(total);
+            hitungKembalian(total);
         });
     });
 
     cashInput?.addEventListener('input', () =>
-        calculateChange(parseInt(document.getElementById('payment-grand-total').getAttribute('data-amount'))));
+        hitungKembalian(parseInt(document.getElementById('payment-grand-total').getAttribute('data-amount'))));
 
     methodCards.forEach(card => {
         card.addEventListener('click', () => {
@@ -413,23 +416,22 @@ function initPaymentInteractions() {
             document.getElementById('change-display-box').classList.toggle('hidden', isNonCash);
             document.getElementById('insufficient-funds-alert').classList.add('hidden');
             if (!isNonCash)
-                calculateChange(parseInt(document.getElementById('payment-grand-total').getAttribute('data-amount')));
+                hitungKembalian(parseInt(document.getElementById('payment-grand-total').getAttribute('data-amount')));
         });
     });
 
-    document.getElementById('btn-process-payment')?.addEventListener('click', processActiveCheckout);
+    document.getElementById('btn-process-payment')?.addEventListener('click', prosesCheckoutAktif);
 }
 
-function calculateChange(grandTotal) {
+function hitungKembalian(grandTotal) {
     const cash = parseInt(document.getElementById('cash-tendered').value) || 0;
     const chg  = cash - grandTotal;
-    document.getElementById('payment-change').innerText = chg >= 0 ? formatIDR(chg) : 'Rp0';
+    document.getElementById('payment-change').innerText = chg >= 0 ? formatRupiah(chg) : 'Rp0';
     document.getElementById('insufficient-funds-alert')
         .classList.toggle('hidden', cash === 0 || chg >= 0);
 }
 
-// ── Proses Checkout → POST /api/transaksi ────────────────────
-async function processActiveCheckout() {
+async function prosesCheckoutAktif() {
     const grandTotal = parseInt(document.getElementById('payment-grand-total').getAttribute('data-amount'));
     const method     = document.querySelector('input[name="payment_method"]:checked').value;
     const cashInput  = document.getElementById('cash-tendered');
@@ -438,7 +440,7 @@ async function processActiveCheckout() {
     if (method === 'Cash') {
         cashPaid = parseInt(cashInput.value) || 0;
         if (cashPaid < grandTotal) {
-            showToast('Uang tunai tidak cukup!', 'danger');
+            tampilkanToast('Uang tunai tidak cukup!', 'danger');
             document.getElementById('insufficient-funds-alert').classList.remove('hidden');
             document.querySelector('.payment-modal-content').classList.add('modal-shake');
             setTimeout(() =>
@@ -449,10 +451,9 @@ async function processActiveCheckout() {
     }
 
     const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
-    const tax = Math.round(sub * 0.1);
-    const svc = Math.round(sub * 0.05);
+    const tax = 0;
+    const svc = 0;
 
-    // ── Payload sesuai kolom transaksi & detail_transaksi ──
     const payload = {
         id_user           : SESSION.id,
         total_harga       : grandTotal,
@@ -472,7 +473,7 @@ async function processActiveCheckout() {
 
     try {
         const res  = await fetch(`${API_BASE}/transaksi`, {
-            method:'POST', headers: apiHeaders(), body: JSON.stringify(payload)
+            method:'POST', headers: headerApi(), body: JSON.stringify(payload)
         });
         const data = await res.json();
 
@@ -480,23 +481,23 @@ async function processActiveCheckout() {
             const txForReceipt = {
                 id: data.id_transaksi,
                 txId: `TX-${String(data.id_transaksi).padStart(6,'0')}`,
-                date: getFormattedDateTime(new Date()),
+                date: ambilFormatTanggalWaktu(new Date()),
                 cashier: SESSION.nama,
                 items: [...cart],
-                subtotal: sub, tax, service: svc,
+                subtotal: sub, tax: 0, service: 0,
                 grandTotal, method, cashPaid, change
             };
-            closeModal('payment-modal');
-            resetCartState();
-            showToast('Transaksi Berhasil Diproses!', 'success');
+            tutupModal('payment-modal');
+            aturUlangStatusKeranjang();
+            tampilkanToast('Transaksi Berhasil Diproses!', 'success');
             await loadTransaksiHariIni();
-            setTimeout(() => simulateReceiptPrint(txForReceipt), 400);
+            setTimeout(() => simulasikanCetakStruk(txForReceipt), 400);
         } else {
-            showToast(data.message || 'Gagal menyimpan transaksi!', 'danger');
+            tampilkanToast(data.message || 'Gagal menyimpan transaksi!', 'danger');
         }
     } catch (e) {
         console.error(e);
-        showToast('Gagal terhubung ke server!', 'danger');
+        tampilkanToast('Gagal terhubung ke server!', 'danger');
     } finally {
         btnProcess.removeAttribute('disabled');
         btnProcess.innerHTML = '<i class="fa-solid fa-square-check"></i> Proses Pembayaran';
@@ -506,11 +507,10 @@ async function processActiveCheckout() {
 // ============================================================
 //  STRUK / RECEIPT
 // ============================================================
-function simulateReceiptPrint(tx, isReprint = false) {
+function simulasikanCetakStruk(tx, isReprint = false) {
     document.getElementById('print-loading-overlay')?.classList.add('hidden');
-    openModal('receipt-modal');
+    bukaModal('receipt-modal');
     
-    // Toggle close buttons based on isReprint
     const closeBtnX = document.getElementById('btn-close-receipt-x');
     const closeBtnFooter = document.getElementById('btn-close-receipt-footer');
     if (isReprint) {
@@ -524,13 +524,13 @@ function simulateReceiptPrint(tx, isReprint = false) {
     document.getElementById('receipt-tx-id').innerText       = tx.txId || `#${tx.id}`;
     document.getElementById('receipt-date').innerText        = tx.date;
     document.getElementById('receipt-cashier').innerText     = tx.cashier;
-    document.getElementById('receipt-subtotal').innerText    = formatIDR(tx.subtotal);
-    document.getElementById('receipt-tax').innerText         = formatIDR(tx.tax);
-    document.getElementById('receipt-service').innerText     = formatIDR(tx.service);
-    document.getElementById('receipt-grand-total').innerText = formatIDR(tx.grandTotal);
+    document.getElementById('receipt-subtotal').innerText    = formatRupiah(tx.subtotal);
+    document.getElementById('receipt-tax').innerText         = formatRupiah(tx.tax);
+    document.getElementById('receipt-service').innerText     = formatRupiah(tx.service);
+    document.getElementById('receipt-grand-total').innerText = formatRupiah(tx.grandTotal);
     document.getElementById('receipt-method').innerText      = tx.method;
-    document.getElementById('receipt-cash-paid').innerText   = formatIDR(tx.cashPaid);
-    document.getElementById('receipt-change').innerText      = formatIDR(tx.change);
+    document.getElementById('receipt-cash-paid').innerText   = formatRupiah(tx.cashPaid);
+    document.getElementById('receipt-change').innerText      = formatRupiah(tx.change);
 
     const tbody = document.getElementById('receipt-items-tbody');
     if (tbody) {
@@ -539,9 +539,9 @@ function simulateReceiptPrint(tx, isReprint = false) {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td align="left">${item.name}
-                    <br><small style="color:#666">@${formatIDR(item.price)}</small></td>
+                    <br><small style="color:#666">@${formatRupiah(item.price)}</small></td>
                 <td align="center">${item.qty}</td>
-                <td align="right">${formatIDR(item.price * item.qty)}</td>`;
+                <td align="right">${formatRupiah(item.price * item.qty)}</td>`;
             tbody.appendChild(tr);
         });
     }
@@ -553,7 +553,7 @@ function simulateReceiptPrint(tx, isReprint = false) {
         newBtn.addEventListener('click', () => {
             window.print();
             if (!isReprint) {
-                closeModal('receipt-modal');
+                tutupModal('receipt-modal');
             }
         });
     }
@@ -563,9 +563,13 @@ function simulateReceiptPrint(tx, isReprint = false) {
 //  TRANSAKSI — GET dari database
 // ============================================================
 async function loadTransaksiHariIni() {
-    const today = new Date().toISOString().slice(0, 10);
+    const dObj = new Date();
+    const year = dObj.getFullYear();
+    const month = String(dObj.getMonth() + 1).padStart(2, '0');
+    const date = String(dObj.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${date}`;
     try {
-        const res  = await fetch(`${API_BASE}/transaksi?tanggal=${today}`, { headers: apiHeaders() });
+        const res  = await fetch(`${API_BASE}/transaksi?tanggal=${today}`, { headers: headerApi() });
         const data = await res.json();
         if (data.status === 'success') {
             transactions = data.data.map(tx => ({
@@ -580,18 +584,43 @@ async function loadTransaksiHariIni() {
                 status    : tx.status_transaksi || 'berhasil',
                 items     : []
             }));
-            updateDashboardMetrics();
-            renderRecentTransactionsTable();
-            renderTransactionsHistoryTable(transactions);
-            updateChart();
+            perbaruiMetrikDashboard();
+            tampilkanTabelTransaksiTerbaru();
+            perbaruiGrafik();
         }
     } catch (e) { console.error('Gagal load transaksi:', e); }
 }
 
 // ============================================================
-//  RIWAYAT TRANSAKSI
+//  RIWAYAT TRANSAKSI (Filter & Load)
 // ============================================================
-function renderTransactionsHistoryTable(txArray) {
+async function loadRiwayatTransaksi(selectedDate = '') {
+    try {
+        let url = `${API_BASE}/transaksi`;
+        if (selectedDate) {
+            url += `?tanggal=${selectedDate}`;
+        }
+        const res  = await fetch(url, { headers: headerApi() });
+        const data = await res.json();
+        if (data.status === 'success') {
+            historyTransactions = data.data.map(tx => ({
+                id        : tx.id_transaksi,
+                txId      : `TX-${String(tx.id_transaksi).padStart(6,'0')}`,
+                date      : tx.tanggal_transaksi || '',
+                cashier   : tx.nama_kasir || SESSION.nama,
+                grandTotal: Number(tx.total_harga),
+                method    : tx.metode_pembayaran || 'Cash',
+                cashPaid  : Number(tx.uang_bayar  || tx.total_harga),
+                change    : Number(tx.kembalian   || 0),
+                status    : tx.status_transaksi || 'berhasil',
+                items     : []
+            }));
+            applyHistoryFilters();
+        }
+    } catch (e) { console.error('Gagal load riwayat transaksi:', e); }
+}
+
+function tampilkanTabelRiwayatTransaksi(txArray) {
     const tbody = document.getElementById('history-transactions-tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -613,7 +642,7 @@ function renderTransactionsHistoryTable(txArray) {
             <td><strong>${tx.txId}</strong></td>
             <td>${formatTanggal(tx.date)}</td>
             <td>${tx.cashier}</td>
-            <td><strong>${formatIDR(tx.grandTotal)}</strong></td>
+            <td><strong>${formatRupiah(tx.grandTotal)}</strong></td>
             <td><span class="badge ${badgeClass}">
                 <i class="fa-solid ${iconMap[tx.method]||'fa-wallet'}"></i> ${tx.method}</span></td>
             <td><span class="badge badge-success">
@@ -621,7 +650,7 @@ function renderTransactionsHistoryTable(txArray) {
             <td style="text-align:center">
                 <div class="action-cell-buttons">
                     <button class="btn-table-action btn-detail"
-                        onclick="openTransactionDetails(${tx.id})">
+                        onclick="bukaDetailTransaksi(${tx.id})">
                         <i class="fa-regular fa-eye"></i> Detail
                     </button>
                 </div>
@@ -636,50 +665,53 @@ function initHistoryFilters() {
     const txPayment = document.getElementById('tx-filter-payment');
     const btnReset  = document.getElementById('btn-reset-tx-filters');
 
-    function apply() {
-        const q = (txSearch.value||'').toLowerCase();
-        const d = txDate.value;
-        const p = txPayment.value;
-        const filtered = transactions.filter(tx => {
-            const mQ = tx.txId.toLowerCase().includes(q) || tx.cashier.toLowerCase().includes(q);
-            const mP = p === 'all' || tx.method === p;
-            const mD = !d || (tx.date||'').startsWith(d);
-            return mQ && mP && mD;
-        });
-        renderTransactionsHistoryTable(filtered);
+    async function onDateChange() {
+        await loadRiwayatTransaksi(txDate.value);
     }
 
+    function apply() {
+        const q = (txSearch.value||'').toLowerCase();
+        const p = txPayment.value;
+        const filtered = historyTransactions.filter(tx => {
+            const mQ = tx.txId.toLowerCase().includes(q) || tx.cashier.toLowerCase().includes(q);
+            const mP = p === 'all' || tx.method === p;
+            return mQ && mP;
+        });
+        tampilkanTabelRiwayatTransaksi(filtered);
+    }
+
+    window.applyHistoryFilters = apply;
+
     txSearch?.addEventListener('input', apply);
-    txDate?.addEventListener('change', apply);
+    txDate?.addEventListener('change', onDateChange);
     txPayment?.addEventListener('change', apply);
-    btnReset?.addEventListener('click', () => {
+    btnReset?.addEventListener('click', async () => {
         txSearch.value=''; txDate.value=''; txPayment.value='all';
-        renderTransactionsHistoryTable(transactions);
-        showToast('Filter direset','success');
+        await loadRiwayatTransaksi('');
+        tampilkanToast('Filter direset','success');
     });
 }
 
-// ── Detail transaksi — load item dari DB ─────────────────────
-window.openTransactionDetails = async function (txId) {
+window.bukaDetailTransaksi = window.openTransactionDetails = async function (txId) {
     try {
-        const res  = await fetch(`${API_BASE}/transaksi/${txId}`, { headers: apiHeaders() });
+        const res  = await fetch(`${API_BASE}/transaksi/${txId}`, { headers: headerApi() });
         const data = await res.json();
-        if (data.status !== 'success') { showToast('Gagal load detail','danger'); return; }
+        if (data.status !== 'success') { tampilkanToast('Gagal load detail','danger'); return; }
 
         const tx    = data.data;
         const items = tx.items || [];
         const sub   = items.reduce((s, i) => s + Number(i.subtotal), 0);
-        const tax   = Math.round(sub * 0.1);
-        const svc   = Math.round(sub * 0.05);
+        const tax   = 0;
+        const svc   = 0;
 
         document.getElementById('detail-tx-id').innerText        = `TX-${String(tx.id_transaksi).padStart(6,'0')}`;
         document.getElementById('detail-tx-date').innerText      = formatTanggal(tx.tanggal_transaksi);
         document.getElementById('detail-tx-method').innerText    = tx.metode_pembayaran;
         document.getElementById('detail-tx-cashier').innerText   = tx.nama_kasir || SESSION.nama;
-        document.getElementById('detail-tx-subtotal').innerText  = formatIDR(sub);
-        document.getElementById('detail-tx-tax').innerText       = formatIDR(tax);
-        document.getElementById('detail-tx-service').innerText   = formatIDR(svc);
-        document.getElementById('detail-tx-grand-total').innerText = formatIDR(Number(tx.total_harga));
+        document.getElementById('detail-tx-subtotal').innerText  = formatRupiah(sub);
+        document.getElementById('detail-tx-tax').innerText       = formatRupiah(tax);
+        document.getElementById('detail-tx-service').innerText   = formatRupiah(svc);
+        document.getElementById('detail-tx-grand-total').innerText = formatRupiah(Number(tx.total_harga));
 
         const tbody = document.getElementById('detail-tx-items-tbody');
         tbody.innerHTML = '';
@@ -688,19 +720,19 @@ window.openTransactionDetails = async function (txId) {
             tr.innerHTML = `
                 <td><strong>${item.nama_product}</strong></td>
                 <td style="text-align:center">${item.qty}</td>
-                <td style="text-align:right">${formatIDR(Number(item.harga_satuan))}</td>
-                <td style="text-align:right"><strong>${formatIDR(Number(item.subtotal))}</strong></td>`;
+                <td style="text-align:right">${formatRupiah(Number(item.harga_satuan))}</td>
+                <td style="text-align:right"><strong>${formatRupiah(Number(item.subtotal))}</strong></td>`;
             tbody.appendChild(tr);
         });
 
-        openModal('tx-detail-modal');
+        bukaModal('tx-detail-modal');
 
         const reprintBtn = document.getElementById('btn-reprint-from-detail');
         const newBtn = reprintBtn.cloneNode(true);
         reprintBtn.parentNode.replaceChild(newBtn, reprintBtn);
         newBtn.addEventListener('click', () => {
-            closeModal('tx-detail-modal');
-            setTimeout(() => simulateReceiptPrint({
+            tutupModal('tx-detail-modal');
+            setTimeout(() => simulasikanCetakStruk({
                 id: tx.id_transaksi,
                 txId: `TX-${String(tx.id_transaksi).padStart(6,'0')}`,
                 date: tx.tanggal_transaksi,
@@ -710,7 +742,7 @@ window.openTransactionDetails = async function (txId) {
                     price: Number(i.harga_satuan),
                     qty  : i.qty
                 })),
-                subtotal: sub, tax, service: svc,
+                subtotal: sub, tax: 0, service: 0,
                 grandTotal: Number(tx.total_harga),
                 method: tx.metode_pembayaran,
                 cashPaid: Number(tx.uang_bayar || tx.total_harga),
@@ -719,18 +751,18 @@ window.openTransactionDetails = async function (txId) {
         });
     } catch (e) {
         console.error(e);
-        showToast('Gagal load detail transaksi','danger');
+        tampilkanToast('Gagal load detail transaksi','danger');
     }
 };
 
 // ============================================================
 //  ABSENSI — TERHUBUNG KE DATABASE
 // ============================================================
-async function loadAbsensiHariIni() {
+async function muatAbsensiHariIni() {
     if (!SESSION.nama) return;
     const today = new Date().toISOString().slice(0, 10);
     try {
-        const res  = await fetch(`${API_BASE}/absensi?tanggal=${today}`, { headers: apiHeaders() });
+        const res  = await fetch(`${API_BASE}/absensi?tanggal=${today}`, { headers: headerApi() });
         const data = await res.json();
         if (data.status === 'success' && data.data.length > 0) {
             const abs = data.data[0];
@@ -739,7 +771,7 @@ async function loadAbsensiHariIni() {
             currentAttendance.clockOut   = (abs.jam_keluar || '').slice(0, 8);
             currentAttendance.activeDate = today;
             currentAttendance.status     = abs.jam_keluar ? 'Selesai Shift' : 'Aktif Bekerja';
-            updateAbsensiUI();
+            perbaruiUIAbsensi();
         }
     } catch (e) { console.error('Gagal load absensi hari ini:', e); }
 }
@@ -747,67 +779,209 @@ async function loadAbsensiHariIni() {
 async function loadRiwayatAbsensi() {
     if (!SESSION.nama) return;
     try {
-        const res  = await fetch(`${API_BASE}/absensi`, { headers: apiHeaders() });
+        const res  = await fetch(`${API_BASE}/absensi`, { headers: headerApi() });
         const data = await res.json();
-        if (data.status === 'success') { attendanceLogs = data.data; renderAttendanceLog(); }
+        if (data.status === 'success') { attendanceLogs = data.data; tampilkanLogAbsensi(); }
     } catch (e) { console.error('Gagal load riwayat absensi:', e); }
 }
+
+let webcamStream = null;
+
+async function mulaiKamera() {
+    const video = document.getElementById('webcam-video');
+    const loading = document.getElementById('camera-loading-placeholder');
+    const errorEl = document.getElementById('camera-error-placeholder');
+    
+    if (!video) return;
+    
+    if (loading) loading.style.display = 'flex';
+    if (errorEl) errorEl.style.display = 'none';
+    
+    try {
+        webcamStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: 'user' },
+            audio: false
+        });
+        video.srcObject = webcamStream;
+        if (loading) loading.style.display = 'none';
+    } catch (err) {
+        console.error('Error accessing webcam:', err);
+        if (loading) loading.style.display = 'none';
+        if (errorEl) errorEl.style.display = 'flex';
+    }
+}
+
+function hentikanKamera() {
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+    }
+    const video = document.getElementById('webcam-video');
+    if (video) video.srcObject = null;
+}
+
+function ambilFotoKamera() {
+    const video = document.getElementById('webcam-video');
+    const canvas = document.getElementById('webcam-canvas');
+    if (!video || !canvas || !webcamStream) return null;
+    
+    const context = canvas.getContext('2d');
+    canvas.width = 640;
+    canvas.height = 480;
+    
+    context.drawImage(video, 0, 0, 640, 480);
+    
+    context.font = "bold 18px Arial, sans-serif";
+    context.fillStyle = "rgba(255, 255, 255, 0.95)";
+    context.strokeStyle = "rgba(0, 0, 0, 0.8)";
+    context.lineWidth = 4;
+    
+    const timestamp = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+    const text1 = `KOPI SIBEI - ${timestamp}`;
+    
+    context.strokeText(text1, 20, 450);
+    context.fillText(text1, 20, 450);
+    
+    return canvas.toDataURL('image/jpeg', 0.85);
+}
+
+window.closeCameraModal = function() {
+    hentikanKamera();
+    tutupModal('camera-modal');
+};
 
 function initAttendanceInteractions() {
     // ── ABSEN MASUK ──
     document.getElementById('btn-clock-in')?.addEventListener('click', async () => {
         if (currentAttendance.status !== 'Belum Absen') return;
-        if (!SESSION.nama) { showToast('Session tidak ditemukan, login ulang','danger'); return; }
+        if (!SESSION.nama) { tampilkanToast('Session tidak ditemukan, login ulang','danger'); return; }
 
-        try {
-            const res  = await fetch(`${API_BASE}/absensi/masuk`, {
-                method : 'POST',
-                headers: apiHeaders(),
-                body   : JSON.stringify({ nama_kasir: SESSION.nama })
+        bukaModal('camera-modal');
+        const titleEl = document.getElementById('camera-modal-title');
+        if (titleEl) {
+            titleEl.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Foto Absen Masuk';
+        }
+        
+        await mulaiKamera();
+
+        const captureBtn = document.getElementById('btn-capture-absensi');
+        if (captureBtn) {
+            const newCaptureBtn = captureBtn.cloneNode(true);
+            captureBtn.parentNode.replaceChild(newCaptureBtn, captureBtn);
+
+            newCaptureBtn.addEventListener('click', async () => {
+                newCaptureBtn.setAttribute('disabled', 'true');
+                newCaptureBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+
+                const photo = ambilFotoKamera();
+                if (!photo) {
+                    tampilkanToast('Foto absensi gagal diambil! Pastikan izin kamera aktif.', 'danger');
+                    newCaptureBtn.removeAttribute('disabled');
+                    newCaptureBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Jepret & Kirim';
+                    return;
+                }
+
+                try {
+                    const res  = await fetch(`${API_BASE}/absensi/masuk`, {
+                        method : 'POST',
+                        headers: headerApi(),
+                        body   : JSON.stringify({ 
+                            nama_kasir: SESSION.nama,
+                            foto: photo 
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        currentAttendance.status     = 'Aktif Bekerja';
+                        currentAttendance.clockIn    = new Date().toLocaleTimeString('id-ID');
+                        currentAttendance.activeDate = new Date().toISOString().slice(0, 10);
+                        currentAttendance.id_absensi = data.id_absensi;
+                        perbaruiUIAbsensi();
+                        tampilkanToast('Absen Masuk berhasil dicatat!','success');
+                        hentikanKamera();
+                        tutupModal('camera-modal');
+                        loadRiwayatAbsensi();
+                    } else {
+                        tampilkanToast(data.message || 'Gagal absen masuk','danger');
+                    }
+                } catch (e) { 
+                    console.error(e);
+                    tampilkanToast('Gagal terhubung ke server!','danger'); 
+                } finally {
+                    newCaptureBtn.removeAttribute('disabled');
+                    newCaptureBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Jepret & Kirim';
+                }
             });
-            const data = await res.json();
-            if (data.status === 'success') {
-                currentAttendance.status     = 'Aktif Bekerja';
-                currentAttendance.clockIn    = new Date().toLocaleTimeString('id-ID');
-                currentAttendance.activeDate = new Date().toISOString().slice(0, 10);
-                currentAttendance.id_absensi = data.id_absensi;
-                updateAbsensiUI();
-                showToast('Absen Masuk berhasil dicatat!','success');
-                loadRiwayatAbsensi();
-            } else {
-                showToast(data.message || 'Gagal absen masuk','danger');
-            }
-        } catch (e) { showToast('Gagal terhubung ke server!','danger'); }
+        }
     });
 
     // ── ABSEN KELUAR ──
     document.getElementById('btn-clock-out')?.addEventListener('click', async () => {
         if (currentAttendance.status !== 'Aktif Bekerja') return;
-        if (!hasWorkedEightHours()) {
-            showToast('Anda belum mencapai 8 jam kerja!', 'warning');
+        if (!sudahBekerjaDelapanJam()) {
+            tampilkanToast('Anda belum mencapai 8 jam kerja!', 'warning');
             return;
         }
 
-        try {
-            const res  = await fetch(`${API_BASE}/absensi/keluar`, {
-                method : 'PUT',
-                headers: apiHeaders()
+        bukaModal('camera-modal');
+        const titleEl = document.getElementById('camera-modal-title');
+        if (titleEl) {
+            titleEl.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Foto Absen Pulang';
+        }
+        
+        await mulaiKamera();
+
+        const captureBtn = document.getElementById('btn-capture-absensi');
+        if (captureBtn) {
+            const newCaptureBtn = captureBtn.cloneNode(true);
+            captureBtn.parentNode.replaceChild(newCaptureBtn, captureBtn);
+
+            newCaptureBtn.addEventListener('click', async () => {
+                newCaptureBtn.setAttribute('disabled', 'true');
+                newCaptureBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengirim...';
+
+                const photo = ambilFotoKamera();
+                if (!photo) {
+                    tampilkanToast('Foto absensi gagal diambil! Pastikan izin kamera aktif.', 'danger');
+                    newCaptureBtn.removeAttribute('disabled');
+                    newCaptureBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Jepret & Kirim';
+                    return;
+                }
+
+                try {
+                    const res  = await fetch(`${API_BASE}/absensi/keluar`, {
+                        method : 'PUT',
+                        headers: headerApi(),
+                        body   : JSON.stringify({
+                            id_absensi: currentAttendance.id_absensi,
+                            foto: photo
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.status === 'success') {
+                        currentAttendance.clockOut = new Date().toLocaleTimeString('id-ID');
+                        currentAttendance.status   = 'Selesai Shift';
+                        perbaruiUIAbsensi();
+                        tampilkanToast('Absen Pulang dicatat. Selamat beristirahat!','success');
+                        hentikanKamera();
+                        tutupModal('camera-modal');
+                        loadRiwayatAbsensi();
+                    } else {
+                        tampilkanToast(data.message || 'Gagal absen keluar','danger');
+                    }
+                } catch (e) { 
+                    console.error(e);
+                    tampilkanToast('Gagal terhubung ke server!','danger'); 
+                } finally {
+                    newCaptureBtn.removeAttribute('disabled');
+                    newCaptureBtn.innerHTML = '<i class="fa-solid fa-check-circle"></i> Jepret & Kirim';
+                }
             });
-            const data = await res.json();
-            if (data.status === 'success') {
-                currentAttendance.clockOut = new Date().toLocaleTimeString('id-ID');
-                currentAttendance.status   = 'Selesai Shift';
-                updateAbsensiUI();
-                showToast('Absen Pulang dicatat. Selamat beristirahat!','success');
-                loadRiwayatAbsensi();
-            } else {
-                showToast(data.message || 'Gagal absen keluar','danger');
-            }
-        } catch (e) { showToast('Gagal terhubung ke server!','danger'); }
+        }
     });
 }
 
-function hasWorkedEightHours() {
+function sudahBekerjaDelapanJam() {
     if (!currentAttendance.clockIn) return false;
     const timeParts = currentAttendance.clockIn.replace(/\./g, ':').split(':');
     if (timeParts.length < 2) return false;
@@ -821,7 +995,7 @@ function hasWorkedEightHours() {
     return diffHours >= 8;
 }
 
-function updateAbsensiUI() {
+function perbaruiUIAbsensi() {
     const btnIn  = document.getElementById('btn-clock-in');
     const btnOut = document.getElementById('btn-clock-out');
     const badge  = document.getElementById('nav-attendance-badge');
@@ -854,7 +1028,7 @@ function updateAbsensiUI() {
     }
 }
 
-function renderAttendanceLog() {
+function tampilkanLogAbsensi() {
     const tbody = document.getElementById('attendance-log-tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -888,11 +1062,11 @@ function renderAttendanceLog() {
 // ============================================================
 //  DASHBOARD METRICS
 // ============================================================
-function updateDashboardMetrics() {
+function perbaruiMetrikDashboard() {
     document.getElementById('stat-total-tx').innerText =
         transactions.length;
     document.getElementById('stat-revenue').innerText =
-        formatIDR(transactions.reduce((s, t) => s + t.grandTotal, 0));
+        formatRupiah(transactions.reduce((s, t) => s + t.grandTotal, 0));
     document.getElementById('stat-items-sold').innerText =
         `${transactions.length} Transaksi`;
     loadTopMenuAllTime();
@@ -903,7 +1077,7 @@ async function loadTopMenuAllTime() {
     if (!el) return;
     el.innerText = '...';
     try {
-        const res  = await fetch(`${API_BASE}/transaksi?all_cashiers=true`, { headers: apiHeaders() });
+        const res  = await fetch(`${API_BASE}/transaksi?all_cashiers=true`, { headers: headerApi() });
         const data = await res.json();
         if (data.status !== 'success' || !data.data.length) {
             el.innerText = '-'; return;
@@ -912,7 +1086,7 @@ async function loadTopMenuAllTime() {
 
         const detailResults = await Promise.all(
             allTx.map(tx =>
-                fetch(`${API_BASE}/transaksi/${tx.id_transaksi}`, { headers: apiHeaders() })
+                fetch(`${API_BASE}/transaksi/${tx.id_transaksi}`, { headers: headerApi() })
                     .then(r => r.json()).catch(() => null)
             )
         );
@@ -942,7 +1116,7 @@ async function loadTopMenuAllTime() {
     }
 }
 
-function renderRecentTransactionsTable() {
+function tampilkanTabelTransaksiTerbaru() {
     const tbody = document.getElementById('recent-transactions-tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -958,7 +1132,7 @@ function renderRecentTransactionsTable() {
         tr.innerHTML = `
             <td><strong>${tx.txId}</strong></td>
             <td>${formatTanggal(tx.date, false, true)}</td>
-            <td><strong>${formatIDR(tx.grandTotal)}</strong></td>
+            <td><strong>${formatRupiah(tx.grandTotal)}</strong></td>
             <td><span class="badge ${tx.method==='Cash'?'badge-success':'badge-warning'}">
                 ${tx.method}</span></td>
             <td><span class="badge badge-success">
@@ -988,7 +1162,7 @@ function initChart() {
             responsive:true, maintainAspectRatio:false,
             plugins: {
                 legend:{display:false},
-                tooltip:{callbacks:{label: c => `Pendapatan: ${formatIDR(c.parsed.y)}`}}
+                tooltip:{callbacks:{label: c => `Pendapatan: ${formatRupiah(c.parsed.y)}`}}
             },
             scales: {
                 y:{ beginAtZero:true,
@@ -1001,7 +1175,7 @@ function initChart() {
     });
 }
 
-function updateChart() {
+function perbaruiGrafik() {
     if (!salesChart) return;
     const hourMap = {};
     transactions.forEach(tx => {
@@ -1023,7 +1197,7 @@ function initNavigationRouter() {
     navItems.forEach(item => {
         item.addEventListener('click', () => {
             const target = item.getAttribute('data-target');
-            if (target === 'logout') { openModal('logout-modal'); return; }
+            if (target === 'logout') { bukaModal('logout-modal'); return; }
             navItems.forEach(n => n.classList.remove('active'));
             item.classList.add('active');
             document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
@@ -1031,9 +1205,9 @@ function initNavigationRouter() {
             if (pageTitle)
                 pageTitle.innerText = target.charAt(0).toUpperCase()+target.slice(1).replace('-',' ');
             if (target === 'dashboard') loadTransaksiHariIni();
-            if (target === 'riwayat')   loadTransaksiHariIni();
+            if (target === 'riwayat')   loadRiwayatTransaksi('');
             if (target === 'absensi')   loadRiwayatAbsensi();
-            if (target === 'transaksi') applyMenuFilter();
+            if (target === 'transaksi') terapkanFilterMenu();
         });
     });
     document.getElementById('view-all-tx-btn')?.addEventListener('click', () =>
@@ -1044,12 +1218,12 @@ function initNavigationRouter() {
 //  MODAL & LOGOUT
 // ============================================================
 function initGeneralModalTriggers() {
-    document.getElementById('btn-logout-sidebar')?.addEventListener('click', () => openModal('logout-modal'));
+    document.getElementById('btn-logout-sidebar')?.addEventListener('click', () => bukaModal('logout-modal'));
     document.getElementById('btn-confirm-logout')?.addEventListener('click', () => {
-        closeModal('logout-modal');
+        tutupModal('logout-modal');
         localStorage.removeItem('activeUser');
         localStorage.removeItem('activeRole');
-        showToast('Sesi ditutup. Sampai jumpa!','warning');
+        tampilkanToast('Sesi ditutup. Sampai jumpa!','warning');
         setTimeout(() => window.location.href = 'login.html', 800);
     });
 }
@@ -1066,21 +1240,23 @@ function formatTanggal(dateStr, dateOnly=false, timeOnly=false) {
     return d.toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 
-function formatIDR(amount) {
+function formatRupiah(amount) {
     return new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',minimumFractionDigits:0})
         .format(amount).replace(/,00$/,'');
 }
 
-function getFormattedDateTime(date) {
+function ambilFormatTanggalWaktu(date) {
     const p = n => String(n).padStart(2,'0');
     return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())} `
          + `${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
 }
 
-window.openModal  = id => document.getElementById(id)?.classList.add('active');
-window.closeModal = id => document.getElementById(id)?.classList.remove('active');
+window.bukaModal  = function(id) { document.getElementById(id)?.classList.add('active'); };
+window.tutupModal = function(id) { document.getElementById(id)?.classList.remove('active'); };
+window.openModal = window.bukaModal;
+window.closeModal = window.tutupModal;
 
-window.showToast = function(message, type='info') {
+window.tampilkanToast = function(message, type='info') {
     const container = document.getElementById('toast-container');
     if (!container) return;
     const icons = {success:'fa-circle-check',warning:'fa-triangle-exclamation',
@@ -1091,6 +1267,8 @@ window.showToast = function(message, type='info') {
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 3500);
 };
+window.showToast = window.tampilkanToast;
+window.formatIDR = window.formatRupiah;
 
 function initRealtimeClock() {
     const clockEl  = document.getElementById('live-time');

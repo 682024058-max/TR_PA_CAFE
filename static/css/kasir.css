@@ -627,6 +627,21 @@ body {
     margin-bottom: 18px;
 }
 
+.pos-filter-bar .search-box {
+    position: relative;
+    width: 100%;
+}
+
+.pos-filter-bar .search-box i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    font-size: 16px;
+    pointer-events: none;
+}
+
 .pos-filter-bar .search-box input {
     width: 100%;
     padding: 14px 16px 14px 48px;
@@ -691,7 +706,7 @@ body {
 
 .menu-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 16px;
     padding-bottom: 20px;
 }
@@ -1209,6 +1224,138 @@ body {
     gap: 6px;
 }
 
+.filter-search label,
+.filter-date label,
+.filter-method label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+    letter-spacing: 0.3px;
+}
+
+.search-wrapper {
+    position: relative;
+}
+
+.search-wrapper i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8e7c77;
+    font-size: 14px;
+}
+
+.search-wrapper input {
+    width: 100%;
+    padding: 10px 14px 10px 42px;
+    font-size: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-bg);
+    box-sizing: border-box;
+    height: 40px;
+    transition: var(--transition);
+}
+
+.search-wrapper input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    background-color: var(--color-surface);
+}
+
+.filter-date {
+    flex: 0 0 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-date input[type="date"] {
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-bg);
+    box-sizing: border-box;
+    width: 100%;
+    height: 40px;
+    transition: var(--transition);
+}
+
+.filter-date input[type="date"]:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    background-color: var(--color-surface);
+}
+
+.filter-method {
+    flex: 0 0 150px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-method select {
+    padding: 10px 14px;
+    font-size: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-bg);
+    box-sizing: border-box;
+    width: 100%;
+    height: 40px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.filter-method select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    background-color: var(--color-surface);
+}
+
+.btn-reset-filter {
+    padding: 0 20px;
+    height: 40px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background-color: var(--color-surface);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+
+.btn-reset-filter:hover {
+    background-color: var(--color-accent-light);
+    color: var(--color-primary);
+    border-color: var(--color-accent);
+}
+
+.btn-reset-filter i {
+    font-size: 12px;
+}
+/* ===== END FILTER HORIZONTAL ===== */
+
+/* Filter Group (Legacy) */
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 150px;
+}
+
+.filter-group.search-group {
+    flex: 2 1 240px;
+}
+
 .filter-group label {
     font-size: 11px;
     font-weight: 700;
@@ -1218,7 +1365,8 @@ body {
 
 .filter-group input,
 .filter-group select {
-    padding: 10px 14px;
+    width: 100%;
+    padding: 6px 12px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-border);
     background-color: var(--color-bg);
@@ -1226,7 +1374,25 @@ body {
     font-weight: 500;
     color: var(--color-text);
     transition: var(--transition);
-    height: 40px;
+    height: 36px;
+}
+
+.riwayat-filter-header .search-box {
+    position: relative;
+    width: 100%;
+}
+
+.riwayat-filter-header .search-box i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+}
+
+.riwayat-filter-header .search-box input {
+    padding-left: 36px;
+    width: 100%;
 }
 
 .filter-group input:focus,
@@ -1236,8 +1402,8 @@ body {
 }
 
 .btn-reset-filters {
-    height: 40px;
-    padding: 0 20px;
+    height: 36px;
+    padding: 0 16px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-border);
     background-color: var(--color-surface);

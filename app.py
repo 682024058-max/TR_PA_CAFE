@@ -1,9 +1,3 @@
-# =======================================================
-# KOPI SIBEI - POS CAFE BACKEND — DISESUAIKAN STRUKTUR DB
-# Tabel nyata: users, kategori, products, transaksi,
-#              detail_transaksi, absensi
-# =======================================================
-
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import pymysql, pymysql.cursors, decimal
@@ -14,27 +8,85 @@ import threading
 import time
 import urllib.request
 import json
+import base64
+import re
+from fpdf import FPDF
 
 app = Flask(__name__)
 CORS(app)
 
-DB_HOST     = "localhost"
-DB_USER     = "root"
-DB_PASSWORD = ""
-DB_NAME     = "cafe"
-DB_PORT     = 3306
+import os
+import urllib.parse
+
+# Load .env file manually if exists (avoiding python-dotenv dependency)
+base_dir = os.path.dirname(os.path.abspath(__file__))
+env_path = os.path.join(base_dir, ".env")
+if os.path.exists(env_path):
+    try:
+        with open(env_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, val = line.split("=", 1)
+                    val = val.strip().strip("'").strip('"')
+                    os.environ[key.strip()] = val
+    except Exception as e:
+        print("Gagal membaca file .env secara manual:", e)
+
+# ── Konfigurasi Cloudinary ────────────────────────────────────
+import cloudinary
+import cloudinary.uploader
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+    secure=True
+)
+
+# Parse DATABASE_URL if present, otherwise read individual variables
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if DATABASE_URL:
+    try:
+        # Standardize prefix for urlparse (mysql+pymysql:// -> mysql://)
+        url_str = DATABASE_URL
+        if url_str.startswith("mysql+pymysql://"):
+            url_str = url_str.replace("mysql+pymysql://", "mysql://", 1)
+        parsed = urllib.parse.urlparse(url_str)
+        DB_HOST     = parsed.hostname or "localhost"
+        DB_USER     = parsed.username or "root"
+        DB_PASSWORD = parsed.password or ""
+        DB_PORT     = parsed.port or 4000  # Default TiDB port is 4000
+        DB_NAME     = parsed.path.lstrip('/') or "Sibei"
+    except Exception as e:
+        print("Gagal mem-parsing DATABASE_URL, menggunakan fallback default:", e)
+        DB_HOST     = os.environ.get("DB_HOST", "localhost")
+        DB_USER     = os.environ.get("DB_USER", "root")
+        DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+        DB_NAME     = os.environ.get("DB_NAME", "Sibei")
+        DB_PORT     = int(os.environ.get("DB_PORT", 3306))
+else:
+    DB_HOST     = os.environ.get("DB_HOST", "localhost")
+    DB_USER     = os.environ.get("DB_USER", "root")
+    DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+    DB_NAME     = os.environ.get("DB_NAME", "Sibei")
+    DB_PORT     = int(os.environ.get("DB_PORT", 3306))
 
 # ── Konfigurasi Resend API & Laporan Otomatis ────────────────
-RESEND_API_KEY = "re_KaTaQNWQ_EJvAZLzSKgJE3nyiEUZHJ2Nx"
-RESEND_SENDER  = "Kopi Sibei <onboarding@resend.dev>"
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "re_KaTaQNWQ_EJvAZLzSKgJE3nyiEUZHJ2Nx")
+RESEND_SENDER  = os.environ.get("RESEND_SENDER", "Kopi Sibei <onboarding@resend.dev>")
 AUTO_REPORT_TIME = "00:00"  # Format HH:MM (24 jam)
 
 # ── Koneksi ──────────────────────────────────────────────────
 def get_db():
+    ssl_config = None
+    if "localhost" not in DB_HOST:
+        ssl_config = {'ssl': {}}
+        
     return pymysql.connect(
         host=DB_HOST, user=DB_USER, password=DB_PASSWORD,
-        database=DB_NAME, port=DB_PORT,
-        cursorclass=pymysql.cursors.DictCursor, autocommit=True
+        database=DB_NAME, port=DB_PORT, ssl=ssl_config,
+        cursorclass=pymysql.cursors.DictCursor, autocommit=True,
+        init_command="SET time_zone = '+07:00'"
     )
 
 def serialize(obj):
@@ -277,12 +329,12 @@ def get_products():
             kat = request.args.get('kategori')
             if kat:
                 cur.execute(
-                    "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, icon, warna "
+                    "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, foto, warna "
                     "FROM products WHERE kategori=%s ORDER BY id_products", (kat,)
                 )
             else:
                 cur.execute(
-                    "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, icon, warna "
+                    "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, foto, warna "
                     "FROM products ORDER BY id_products"
                 )
             rows = cur.fetchall()
@@ -299,7 +351,7 @@ def get_product_detail(id_product):
         conn = get_db()
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, icon, warna "
+                "SELECT id_products AS id_product, nama_produk AS nama_product, kategori, harga, foto, warna "
                 "FROM products WHERE id_products=%s", (id_product,)
             )
             row = cur.fetchone()
@@ -318,14 +370,26 @@ def add_product():
     for f in ['nama_product','harga','kategori']:
         if data.get(f) is None:
             return jsonify({"status":"error","message":f"Field '{f}' wajib diisi!"}), 400
+    
+    foto = data.get('foto')
+    foto_url = None
+    if foto:
+        if foto.startswith("data:image/"):
+            try:
+                res = cloudinary.uploader.upload(foto, folder="products")
+                foto_url = res.get("secure_url")
+            except Exception as e:
+                print("Gagal upload foto menu ke Cloudinary:", e)
+        else:
+            foto_url = foto
+
     conn = None
     try:
         conn = get_db()
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO products (nama_produk, kategori, harga, icon, warna) VALUES (%s,%s,%s,%s,%s)",
-                (data['nama_product'], data['kategori'], data['harga'],
-                 data.get('icon','fa-mug-hot'), data.get('warna','#4e3629'))
+                "INSERT INTO products (nama_produk, kategori, harga, foto, warna) VALUES (%s,%s,%s,%s,%s)",
+                (data['nama_product'], data['kategori'], data['harga'], foto_url, data.get('warna','#4e3629'))
             )
         return jsonify({"status":"success","message":"Produk berhasil ditambahkan."}), 201
     except Exception as e:
@@ -337,13 +401,22 @@ def add_product():
 @role_required('manager')
 def update_product(id_product):
     data = request.get_json()
+    
+    foto = data.get('foto')
+    if foto and foto.startswith("data:image/"):
+        try:
+            res = cloudinary.uploader.upload(foto, folder="products")
+            data['foto'] = res.get("secure_url")
+        except Exception as e:
+            print("Gagal upload foto menu ke Cloudinary:", e)
+
     conn = None
     try:
         conn = get_db()
         with conn.cursor() as cur:
             fields, values = [], []
-            for col in ['nama_product','kategori','harga','icon','warna']:
-                if col in data and data[col] is not None:
+            for col in ['nama_product','kategori','harga','foto','warna']:
+                if col in data:
                     db_col = 'nama_produk' if col == 'nama_product' else col
                     fields.append(f"{db_col}=%s"); values.append(data[col])
             if not fields:
@@ -567,6 +640,15 @@ def absensi_masuk():
     if not nama_kasir:
         return jsonify({"status":"error","message":"nama_kasir wajib diisi!"}), 400
 
+    foto = data.get('foto')
+    foto_url = None
+    if foto:
+        try:
+            res = cloudinary.uploader.upload(foto, folder="absensi")
+            foto_url = res.get("secure_url")
+        except Exception as e:
+            print("Gagal upload foto masuk ke Cloudinary:", e)
+
     conn = None
     try:
         conn = get_db()
@@ -578,9 +660,9 @@ def absensi_masuk():
             if cur.fetchone():
                 return jsonify({"status":"error","message":"Anda sudah absen masuk hari ini."}), 409
             cur.execute(
-                "INSERT INTO absensi (date, nama_kasir, jam_masuk, status) "
-                "VALUES (CURDATE(), %s, NOW(), 'Hadir')",
-                (nama_kasir,)
+                "INSERT INTO absensi (date, nama_kasir, jam_masuk, status, foto_masuk) "
+                "VALUES (CURDATE(), %s, NOW(), 'Hadir', %s)",
+                (nama_kasir, foto_url)
             )
             id_absensi = cur.lastrowid
         return jsonify({"status":"success","message":"Absen masuk berhasil!","id_absensi":id_absensi}), 201
@@ -592,12 +674,21 @@ def absensi_masuk():
 @app.route('/api/absensi/keluar', methods=['PUT'])
 @role_required('kasir','manager')
 def absensi_keluar():
+    data = request.get_json() or {}
     nama_kasir = request.headers.get("X-User-Name","").strip()
     if not nama_kasir:
-        data = request.get_json() or {}
         nama_kasir = data.get('nama_kasir','').strip()
     if not nama_kasir:
-        return jsonify({"status":"error","message":"nama_kasir diperlukan di header X-User-Name."}), 400
+        return jsonify({"status":"error","message":"nama_kasir diperlukan."}), 400
+
+    foto = data.get('foto')
+    foto_url = None
+    if foto:
+        try:
+            res = cloudinary.uploader.upload(foto, folder="absensi")
+            foto_url = res.get("secure_url")
+        except Exception as e:
+            print("Gagal upload foto keluar ke Cloudinary:", e)
 
     conn = None
     try:
@@ -606,9 +697,10 @@ def absensi_keluar():
             cur.execute(
                 "UPDATE absensi "
                 "SET jam_keluar=NOW(), "
-                "    total_jam=ROUND(TIMESTAMPDIFF(MINUTE, jam_masuk, NOW())/60.0, 2) "
+                "    total_jam=ROUND(TIMESTAMPDIFF(MINUTE, jam_masuk, NOW())/60.0, 2), "
+                "    foto_keluar=%s "
                 "WHERE nama_kasir=%s AND date=CURDATE() AND jam_keluar IS NULL",
-                (nama_kasir,)
+                (foto_url, nama_kasir)
             )
             if cur.rowcount == 0:
                 return jsonify({"status":"error",
@@ -855,7 +947,7 @@ def build_sales_report_html(start_date, end_date):
     finally:
         if conn: conn.close()
 
-def send_email_via_resend(recipient, subject, html_content):
+def send_email_via_resend(recipient, subject, html_content, attachments=None):
     if not RESEND_API_KEY or RESEND_API_KEY.startswith("your-"):
         print("Resend API Key belum diisi. Pengiriman email dilewati (Mode Simulasi).")
         return False
@@ -877,6 +969,8 @@ def send_email_via_resend(recipient, subject, html_content):
         "subject": subject,
         "html": html_content
     }
+    if attachments:
+        payload["attachments"] = attachments
     
     try:
         req = urllib.request.Request(
@@ -936,7 +1030,7 @@ def run_auto_report_scheduler():
 
                 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Pemicu scheduler harian aktif untuk tanggal {report_date}...")
                 recipient = get_manager_email()
-                subject = f"☕ Laporan Penjualan Harian - {report_date}"
+                subject = f"Laporan Penjualan Harian - {report_date}"
                 html_content = build_sales_report_html(report_date, report_date)
                 
                 if html_content:
@@ -973,7 +1067,7 @@ def manual_email_report():
     if not html_content:
         return jsonify({"status": "error", "message": "Gagal menyusun laporan penjualan."}), 500
         
-    subject = f"☕ Laporan Penjualan Cafe ({start_date} s/d {end_date})"
+    subject = f"Laporan Penjualan Cafe ({start_date} s/d {end_date})"
     success = send_email_via_resend(recipient, subject, html_content)
     
     if success:
@@ -996,7 +1090,286 @@ def manual_email_report():
                 "message": "Gagal mengirimkan email via Resend API. Periksa koneksi internet atau status API Key Anda."
             }), 500
 
+@app.route('/api/cron/daily-report', methods=['GET', 'POST'])
+def cron_daily_report():
+    # Mengamankan endpoint agar hanya bisa dipanggil oleh server Vercel Cron
+    auth_header = request.headers.get("Authorization")
+    cron_secret = os.environ.get("CRON_SECRET")
+    
+    is_vercel_cron = False
+    if auth_header and cron_secret and auth_header == f"Bearer {cron_secret}":
+        is_vercel_cron = True
+    elif request.headers.get("X-Vercel-Signature"):
+        is_vercel_cron = True
+    elif request.headers.get("User-Agent") == "vercel-cron/1.0":
+        is_vercel_cron = True
+        
+    if os.environ.get("VERCEL") == "1" and not is_vercel_cron:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    # Ambil tanggal kemarin untuk dilaporkan
+    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    recipient = get_manager_email()
+    subject = f"☕ [AUTO] Laporan Penjualan Harian - {yesterday}"
+    html_content = build_sales_report_html(yesterday, yesterday)
+    
+    if html_content:
+        success = send_email_via_resend(recipient, subject, html_content)
+        if success:
+            return jsonify({"status": "success", "message": f"Cron sukses mengirim laporan {yesterday} ke {recipient}."}), 200
+        
+    return jsonify({"status": "error", "message": "Gagal mengirim laporan otomatis."}), 500
+
 # ============================================================
+#  PENGGAJIAN (PAYROLL CRUD)
+# ============================================================
+def init_payroll_table():
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS penggajian (
+                    id_penggajian INT AUTO_INCREMENT PRIMARY KEY,
+                    id_kasir INT NOT NULL,
+                    periode VARCHAR(7) NOT NULL,
+                    rate_per_shift INT NOT NULL DEFAULT 75000,
+                    total_shift INT NOT NULL DEFAULT 0,
+                    total_gaji INT NOT NULL,
+                    bukti_tf LONGTEXT DEFAULT NULL,
+                    tanggal_dibuat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (id_kasir) REFERENCES users(id_user) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """)
+        print("Tabel penggajian berhasil diinisialisasi.")
+    except Exception as e:
+        print("Gagal menginisialisasi tabel penggajian:", e)
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll/calculate-shifts', methods=['GET'])
+@role_required('manager')
+def calculate_shifts():
+    cashier_name = request.args.get('cashier', '').strip()
+    period = request.args.get('period', '').strip() # format 'YYYY-MM'
+    
+    if not cashier_name or not period:
+        return jsonify({"status":"error","message":"Parameters 'cashier' and 'period' are required."}), 400
+        
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            # Hitung jumlah kehadiran di absensi pada periode tersebut
+            cur.execute(
+                "SELECT COUNT(*) AS total_shifts FROM absensi "
+                "WHERE nama_kasir=%s AND DATE_FORMAT(date, '%%Y-%%m')=%s AND status='Hadir'",
+                (cashier_name, period)
+            )
+            res = cur.fetchone()
+            total_shifts = res['total_shifts'] if res else 0
+        return jsonify({"status":"success","total_shifts":total_shifts}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll', methods=['GET'])
+@role_required('manager')
+def get_payroll():
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            # 1. Ambil semua kasir yang aktif
+            cur.execute("SELECT id_user, nama FROM users WHERE role='kasir'")
+            cashiers = cur.fetchall()
+            
+            # 2. Ambil semua periode unik (bulan-tahun) dari tabel absensi
+            cur.execute("SELECT DISTINCT DATE_FORMAT(date, '%Y-%m') AS period FROM absensi WHERE date IS NOT NULL")
+            periods = [row['period'] for row in cur.fetchall() if row['period']]
+            
+            # Jika tabel absensi masih kosong, tambahkan periode bulan ini sebagai default
+            if not periods:
+                periods = [datetime.now().strftime('%Y-%m')]
+                
+            for period in periods:
+                for cashier in cashiers:
+                    # Hitung total kehadiran shift kasir tersebut pada periode ini
+                    cur.execute(
+                        "SELECT COUNT(*) AS total_shifts FROM absensi "
+                        "WHERE nama_kasir=%s AND DATE_FORMAT(date, '%%Y-%%m')=%s AND status='Hadir'",
+                        (cashier['nama'], period)
+                    )
+                    res = cur.fetchone()
+                    total_shifts = res['total_shifts'] if res else 0
+                    
+                    # Kita hanya buat data gaji otomatis jika kasir tersebut memiliki minimal 1 kehadiran/shift
+                    if total_shifts > 0:
+                        # Cek apakah sudah ada di tabel penggajian
+                        cur.execute(
+                            "SELECT id_penggajian, rate_per_shift FROM penggajian "
+                            "WHERE id_kasir=%s AND periode=%s",
+                            (cashier['id_user'], period)
+                        )
+                        exist = cur.fetchone()
+                        
+                        if not exist:
+                            # Belum ada -> Insert data gaji baru (default rate Rp 75.000)
+                            default_rate = 75000
+                            total_salary = default_rate * total_shifts
+                            cur.execute(
+                                "INSERT INTO penggajian (id_kasir, periode, rate_per_shift, total_shift, total_gaji) "
+                                "VALUES (%s, %s, %s, %s, %s)",
+                                (cashier['id_user'], period, default_rate, total_shifts, total_salary)
+                            )
+                        else:
+                            # Sudah ada -> Update total_shift & total_gaji berdasarkan absensi terbaru
+                            rate = exist['rate_per_shift']
+                            total_salary = rate * total_shifts
+                            cur.execute(
+                                "UPDATE penggajian SET total_shift=%s, total_gaji=%s "
+                                "WHERE id_penggajian=%s",
+                                (total_shifts, total_salary, exist['id_penggajian'])
+                            )
+            
+            # 3. Ambil data penggajian final untuk dikirim ke frontend
+            cur.execute(
+                "SELECT p.id_penggajian AS id, u.nama AS cashier, p.periode AS period, "
+                "p.rate_per_shift AS ratePerShift, p.total_shift AS totalShifts, "
+                "p.total_gaji AS totalSalary, p.bukti_tf AS buktiTF "
+                "FROM penggajian p JOIN users u ON p.id_kasir = u.id_user "
+                "ORDER BY p.id_penggajian DESC"
+            )
+            rows = cur.fetchall()
+        return jsonify({"status":"success","data":rows_to_json(rows)}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll', methods=['POST'])
+@role_required('manager')
+def add_payroll():
+    data = request.get_json() or {}
+    cashier_name = data.get('cashier', '').strip()
+    period = data.get('period', '').strip()
+    rate_per_shift = int(data.get('ratePerShift', 75000))
+    total_shifts = int(data.get('totalShifts', 0))
+    total_salary = rate_per_shift * total_shifts
+    
+    if not cashier_name or not period:
+        return jsonify({"status":"error","message":"Nama kasir dan periode wajib diisi!"}), 400
+        
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            # Cari id_user untuk kasir
+            cur.execute("SELECT id_user FROM users WHERE nama=%s LIMIT 1", (cashier_name,))
+            user = cur.fetchone()
+            if not user:
+                return jsonify({"status":"error","message":f"Kasir dengan nama '{cashier_name}' tidak ditemukan."}), 404
+            
+            # Cek apakah sudah pernah diinput untuk kasir dan periode yang sama
+            cur.execute("SELECT id_penggajian FROM penggajian WHERE id_kasir=%s AND periode=%s", (user['id_user'], period))
+            if cur.fetchone():
+                return jsonify({"status":"error","message":f"Data gaji untuk {cashier_name} periode {period} sudah ada."}), 409
+                
+            cur.execute(
+                "INSERT INTO penggajian (id_kasir, periode, rate_per_shift, total_shift, total_gaji) "
+                "VALUES (%s, %s, %s, %s, %s)",
+                (user['id_user'], period, rate_per_shift, total_shifts, total_salary)
+            )
+        return jsonify({"status":"success","message":"Data penggajian kasir berhasil ditambahkan."}), 201
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll/<int:id_payroll>', methods=['PUT'])
+@role_required('manager')
+def update_payroll(id_payroll):
+    data = request.get_json() or {}
+    cashier_name = data.get('cashier', '').strip()
+    period = data.get('period', '').strip()
+    rate_per_shift = int(data.get('ratePerShift', 75000))
+    total_shifts = int(data.get('totalShifts', 0))
+    total_salary = rate_per_shift * total_shifts
+    
+    if not cashier_name or not period:
+        return jsonify({"status":"error","message":"Nama kasir dan periode wajib diisi!"}), 400
+        
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            # Cari id_user untuk kasir
+            cur.execute("SELECT id_user FROM users WHERE nama=%s LIMIT 1", (cashier_name,))
+            user = cur.fetchone()
+            if not user:
+                return jsonify({"status":"error","message":f"Kasir dengan nama '{cashier_name}' tidak ditemukan."}), 404
+                
+            cur.execute(
+                "UPDATE penggajian SET id_kasir=%s, periode=%s, rate_per_shift=%s, total_shift=%s, total_gaji=%s "
+                "WHERE id_penggajian=%s",
+                (user['id_user'], period, rate_per_shift, total_shifts, total_salary, id_payroll)
+            )
+        return jsonify({"status":"success","message":"Data penggajian kasir berhasil diperbarui."}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll/<int:id_payroll>', methods=['DELETE'])
+@role_required('manager')
+def delete_payroll(id_payroll):
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM penggajian WHERE id_penggajian=%s", (id_payroll,))
+        return jsonify({"status":"success","message":"Data penggajian kasir berhasil dihapus."}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll/<int:id_payroll>/upload-bukti', methods=['POST'])
+@role_required('manager')
+def upload_bukti_payroll(id_payroll):
+    data = request.get_json() or {}
+    bukti_tf = data.get('buktiTF')
+    
+    if not bukti_tf:
+        return jsonify({"status":"error","message":"Bukti transfer kosong!"}), 400
+        
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE penggajian SET bukti_tf=%s WHERE id_penggajian=%s", (bukti_tf, id_payroll))
+        return jsonify({"status":"success","message":"Bukti transfer berhasil disimpan ke database."}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+@app.route('/api/payroll/<int:id_payroll>/bukti', methods=['DELETE'])
+@role_required('manager')
+def delete_bukti_payroll(id_payroll):
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("UPDATE penggajian SET bukti_tf=NULL WHERE id_penggajian=%s", (id_payroll,))
+        return jsonify({"status":"success","message":"Bukti transfer berhasil dihapus."}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
+
+# ============================================================ 
 #  PAGE ROUTING (rendering templates)
 # ============================================================
 @app.route('/')
@@ -1018,6 +1391,7 @@ def route_manager():
 # ============================================================
 if __name__ == '__main__':
     import os
+    init_payroll_table()
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
         scheduler_thread = threading.Thread(target=run_auto_report_scheduler, daemon=True)
         scheduler_thread.start()
