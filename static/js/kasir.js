@@ -58,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAttendanceInteractions();
     initHistoryFilters();
     initGeneralModalTriggers();
+    initReceiptModalClose(); // ← TAMBAHKAN INI untuk close modal struk
     disableBrowserZooming();
     initChart();
 
@@ -67,6 +68,30 @@ document.addEventListener('DOMContentLoaded', () => {
     loadAbsensiHariIni();
     loadRiwayatAbsensi();
 });
+
+// ============================================================
+//  CLOSE RECEIPT MODAL (Tombol X & Klik di Luar)
+// ============================================================
+function initReceiptModalClose() {
+    const btnCloseStruk = document.getElementById('btn-close-struk');
+    const receiptModal = document.getElementById('receipt-modal');
+
+    // Close dengan tombol X
+    if (btnCloseStruk) {
+        btnCloseStruk.addEventListener('click', function() {
+            closeModal('receipt-modal');
+        });
+    }
+
+    // Close saat klik di luar area modal
+    if (receiptModal) {
+        receiptModal.addEventListener('click', function(e) {
+            if (e.target === receiptModal) {
+                closeModal('receipt-modal');
+            }
+        });
+    }
+}
 
 // ============================================================
 //  SESSION — baca dari localStorage setelah login
@@ -428,18 +453,16 @@ async function processActiveCheckout() {
     const svc = Math.round(sub * 0.05);
 
     // ── Payload sesuai kolom transaksi & detail_transaksi ──
-    // transaksi  : uang_bayar, kembalian, metode_pembayaran
-    // detail     : id_product (→ id_products di DB), qty, subtotal
     const payload = {
         id_user           : SESSION.id,
         total_harga       : grandTotal,
-        uang_bayar        : cashPaid,        // kolom: uang_bayar
-        kembalian         : change,          // kolom: kembalian
-        metode_pembayaran : method,          // enum: Cash|QRIS|Debit
+        uang_bayar        : cashPaid,
+        kembalian         : change,
+        metode_pembayaran : method,
         items: cart.map(i => ({
-            id_product: i.id,               // app.py pakai ini untuk id_products
-            qty       : i.qty,              // kolom: qty (bukan jumlah)
-            subtotal  : i.price * i.qty     // tidak ada harga_satuan di detail_transaksi
+            id_product: i.id,
+            qty       : i.qty,
+            subtotal  : i.price * i.qty
         }))
     };
 
@@ -538,8 +561,6 @@ function simulateReceiptPrint(tx, isReprint = false) {
 
 // ============================================================
 //  TRANSAKSI — GET dari database
-//  Kolom response: tanggal_transaksi, uang_bayar, kembalian,
-//                  metode_pembayaran, total_harga, nama_kasir
 // ============================================================
 async function loadTransaksiHariIni() {
     const today = new Date().toISOString().slice(0, 10);
@@ -550,11 +571,11 @@ async function loadTransaksiHariIni() {
             transactions = data.data.map(tx => ({
                 id        : tx.id_transaksi,
                 txId      : `TX-${String(tx.id_transaksi).padStart(6,'0')}`,
-                date      : tx.tanggal_transaksi || '',         // ← kolom yang benar
+                date      : tx.tanggal_transaksi || '',
                 cashier   : tx.nama_kasir || SESSION.nama,
                 grandTotal: Number(tx.total_harga),
                 method    : tx.metode_pembayaran || 'Cash',
-                cashPaid  : Number(tx.uang_bayar  || tx.total_harga),  // ← uang_bayar
+                cashPaid  : Number(tx.uang_bayar  || tx.total_harga),
                 change    : Number(tx.kembalian   || 0),
                 status    : tx.status_transaksi || 'berhasil',
                 items     : []
@@ -639,7 +660,6 @@ function initHistoryFilters() {
 }
 
 // ── Detail transaksi — load item dari DB ─────────────────────
-// detail_transaksi: qty (bukan jumlah), harga_satuan (dari alias p.harga)
 window.openTransactionDetails = async function (txId) {
     try {
         const res  = await fetch(`${API_BASE}/transaksi/${txId}`, { headers: apiHeaders() });
@@ -648,7 +668,6 @@ window.openTransactionDetails = async function (txId) {
 
         const tx    = data.data;
         const items = tx.items || [];
-        // Hitung ulang dari item (detail tidak simpan tax/service)
         const sub   = items.reduce((s, i) => s + Number(i.subtotal), 0);
         const tax   = Math.round(sub * 0.1);
         const svc   = Math.round(sub * 0.05);
@@ -706,9 +725,6 @@ window.openTransactionDetails = async function (txId) {
 
 // ============================================================
 //  ABSENSI — TERHUBUNG KE DATABASE
-//  Kolom: id_absensi, date, nama_kasir, jam_masuk,
-//         jam_keluar, total_jam, status, waktu_dibuat
-//  Tidak ada id_user! Identifikasi lewat nama_kasir
 // ============================================================
 async function loadAbsensiHariIni() {
     if (!SESSION.nama) return;
@@ -747,7 +763,6 @@ function initAttendanceInteractions() {
             const res  = await fetch(`${API_BASE}/absensi/masuk`, {
                 method : 'POST',
                 headers: apiHeaders(),
-                // Kirim nama_kasir — karena absensi tidak simpan id_user
                 body   : JSON.stringify({ nama_kasir: SESSION.nama })
             });
             const data = await res.json();
@@ -774,7 +789,6 @@ function initAttendanceInteractions() {
         }
 
         try {
-            // Endpoint tidak pakai id_user, identifikasi dari X-User-Name header
             const res  = await fetch(`${API_BASE}/absensi/keluar`, {
                 method : 'PUT',
                 headers: apiHeaders()
@@ -854,7 +868,6 @@ function renderAttendanceLog() {
     }
 
     attendanceLogs.forEach(log => {
-        // Kolom: date(date), jam_masuk(time), jam_keluar(time), total_jam(decimal), status
         const masuk  = (log.jam_masuk  || '').slice(0, 8) || '--:--';
         const keluar = (log.jam_keluar || '').slice(0, 8) || '--:--';
         const jam    = log.total_jam != null ? `${parseFloat(log.total_jam).toFixed(1)} Jam` : '--';
@@ -882,17 +895,14 @@ function updateDashboardMetrics() {
         formatIDR(transactions.reduce((s, t) => s + t.grandTotal, 0));
     document.getElementById('stat-items-sold').innerText =
         `${transactions.length} Transaksi`;
-    // Menu terlaris dimuat secara async dari semua transaksi
     loadTopMenuAllTime();
 }
 
-// Fetch semua transaksi + detail untuk hitung menu terlaris all-time
 async function loadTopMenuAllTime() {
     const el = document.getElementById('stat-top-menu');
     if (!el) return;
     el.innerText = '...';
     try {
-        // 1. Ambil semua transaksi (tanpa filter tanggal)
         const res  = await fetch(`${API_BASE}/transaksi?all_cashiers=true`, { headers: apiHeaders() });
         const data = await res.json();
         if (data.status !== 'success' || !data.data.length) {
@@ -900,7 +910,6 @@ async function loadTopMenuAllTime() {
         }
         const allTx = data.data;
 
-        // 2. Fetch detail setiap transaksi secara paralel
         const detailResults = await Promise.all(
             allTx.map(tx =>
                 fetch(`${API_BASE}/transaksi/${tx.id_transaksi}`, { headers: apiHeaders() })
@@ -908,8 +917,6 @@ async function loadTopMenuAllTime() {
             )
         );
 
-        // 3. Akumulasi qty per nama produk
-        // Response: data.data.items → { nama_product, qty, harga_satuan, subtotal }
         const qtyMap = {};
         detailResults.forEach(resp => {
             if (!resp || resp.status !== 'success') return;
@@ -920,14 +927,12 @@ async function loadTopMenuAllTime() {
             });
         });
 
-        // 4. Ambil yang qty-nya terbesar
         const entries = Object.entries(qtyMap);
         if (!entries.length) { el.innerText = '-'; return; }
         entries.sort((a, b) => b[1] - a[1]);
         const [topName, topQty] = entries[0];
         el.innerText = topName;
 
-        // Perbarui juga sub-label jika ada
         const metaEl = el.closest('.stat-info')?.querySelector('.stat-meta');
         if (metaEl) metaEl.textContent = `Terjual ${topQty}× (All Time)`;
 
