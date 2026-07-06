@@ -5,25 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Kopi Sibei - Professional Cafe Cashier System</title>
     
-    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome Icons -->
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Chart.js for beautiful graphs -->
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Custom CSS File -->
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/kasir.css') }}?v=1.1">
 </head>
 <body>
-    <!-- Toast Notification Container -->
+    
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Main App Container -->
+    
     <div class="app-container">
         
         <aside class="sidebar">
@@ -54,7 +54,7 @@
                 </ul>
             </nav>
             
-            <!-- Sidebar Footer: Active Cashier Profile -->
+            
             <div class="sidebar-footer">
                 <div class="cashier-info">
                     <div class="cashier-details">
@@ -68,10 +68,10 @@
             </div>
         </aside>
 
-        <!-- ================= MAIN CONTENT WRAPPER ================= -->
+        
         <div class="main-wrapper">
             
-            <!-- Navbar Atas -->
+            
             <header class="navbar">
                 <div class="navbar-left">
                     <button class="sidebar-toggle" id="sidebar-toggle-btn">
@@ -81,13 +81,13 @@
                 </div>
                 
                 <div class="navbar-right">
-                    <!-- Real-time Clock -->
+                    
                     <div class="realtime-clock">
                         <i class="fa-regular fa-clock"></i>
                         <span id="live-time">Selasa, 26 Mei 2026 | 12:00:00</span>
                     </div>
                     
-                    <!-- Attendance Status Indicator -->
+                    
                     <div class="nav-status-card animate-pulse" id="nav-attendance-badge">
                         <span class="status-indicator warning"></span>
                         <span class="status-label">Belum Absen Masuk</span>
@@ -95,7 +95,7 @@
                 </div>
             </header>
 
-            <!-- Main App Content -->
+            
             <main class="content-body">
                 
                 {% include 'kasir/dashboard.html' %}
@@ -107,11 +107,11 @@
         </div>
     </div>
 
-    <!-- ======================================================= -->
-    <!-- ==================== MODALS AREA ===================== -->
-    <!-- ======================================================= -->
+    
+    
+    
 
-    <!-- ================= 1. MODAL PEMBAYARAN ================= -->
+    
     <div id="payment-modal" class="modal-overlay">
         <div class="modal-content payment-modal-content">
             <div class="modal-header">
@@ -120,14 +120,14 @@
             </div>
             
             <div class="payment-modal-body">
-                <!-- Left: Bill Details -->
+                
                 <div class="bill-details-section">
                     <div class="detail-box total-to-pay">
                         <label>Total Tagihan</label>
                         <h1 id="payment-grand-total">Rp0</h1>
                     </div>
                     
-                    <!-- Cash Tendered Input -->
+                    
                     <div class="detail-box cash-input-box" id="cash-calculator-section">
                         <label for="cash-tendered">Uang Tunai Diterima</label>
                         <div class="cash-input-wrapper">
@@ -135,7 +135,7 @@
                             <input type="number" id="cash-tendered" placeholder="0" min="0" autocomplete="off">
                         </div>
                         
-                        <!-- Quick Cash Shortcuts -->
+                        
                         <div class="quick-cash-grid">
                             <button class="btn-quick-cash" data-amount="20000">20k</button>
                             <button class="btn-quick-cash" data-amount="50000">50k</button>
@@ -144,17 +144,17 @@
                         </div>
                     </div>
                     
-                    <!-- Change Return Status -->
+                    
                     <div class="detail-box change-return-box" id="change-display-box">
                         <label>Kembalian</label>
                         <h2 id="payment-change">Rp0</h2>
                     </div>
 
-                    <!-- QRIS Bukti Transfer Section -->
+                    
                     <div class="detail-box qris-proof-box hidden" id="qris-proof-section" style="border: 1px solid #e1dcd6; border-radius: 8px; padding: 12px; background: #faf8f5;">
                         <label style="font-weight: 600; color: #4a3321; display: block; margin-bottom: 8px;">Foto Bukti Transfer QRIS</label>
                         <div class="qris-proof-wrapper" style="text-align: center;">
-                            <!-- Photo Preview -->
+                            
                             <div id="qris-preview-container" style="width: 100%; height: 160px; border: 2px dashed #4e3629; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #ffffff; overflow: hidden; position: relative; margin-bottom: 10px;">
                                 <img id="qris-preview-img" src="" alt="Bukti Transfer" class="hidden" style="width: 100%; height: 100%; object-fit: contain;">
                                 <div id="qris-preview-placeholder" style="color: #8c7365; display: flex; flex-direction: column; align-items: center; gap: 8px;">
@@ -162,7 +162,7 @@
                                     <span style="font-size: 13px;">Belum ada foto bukti transfer</span>
                                 </div>
                             </div>
-                            <!-- Buttons -->
+                            
                             <div style="display: flex; gap: 8px; justify-content: center;">
                                 <button type="button" class="btn-primary" id="btn-take-qris-photo" style="font-size: 12px; padding: 8px 14px; display: flex; align-items: center; gap: 6px; border-radius: 6px; border: none; cursor: pointer;">
                                     <i class="fa-solid fa-camera"></i> Ambil Foto
@@ -171,13 +171,13 @@
                         </div>
                     </div>
 
-                    <!-- Insufficient Cash Notification (Popup Warning Inline) -->
+                    
                     <div class="alert alert-danger hidden" id="insufficient-funds-alert">
                         <i class="fa-solid fa-triangle-exclamation"></i> Uang pembayaran tidak mencukupi tagihan!
                     </div>
                 </div>
 
-                <!-- Right: Method Choice & Confirm -->
+                
                 <div class="payment-method-section">
                     <label class="section-label">Pilih Metode Pembayaran</label>
                     <div class="method-cards-grid">
@@ -206,10 +206,10 @@
         </div>
     </div>
 
-    <!-- ================= 2. MODAL CETAK STRUK & PRINT SIMULATION ================= -->
+    
     <div id="receipt-modal" class="modal-overlay">
         <div class="modal-content receipt-modal-content">
-            <!-- Simulated Loading Screen for Printing -->
+            
             <div id="print-loading-overlay" class="print-loading-overlay hidden">
                 <div class="loader-spinner"></div>
                 <h3>Sedang Mencetak Struk...</h3>
@@ -226,10 +226,10 @@
     </button>
 </div>
 
-            <!-- Receipt Container styled as thermal slip -->
+            
             <div class="receipt-paper-wrapper">
                 <div class="receipt-paper" id="receipt-thermal-paper">
-                    <!-- Receipt Header -->
+                    
                     <div class="receipt-header">
                         <span class="receipt-logo"><i class="fa-solid fa-mug-hot"></i></span>
                         <h2>KOPI SIBEI CAFE</h2>
@@ -238,7 +238,7 @@
                         <div class="divider-dashed"></div>
                     </div>
 
-                    <!-- Receipt Metadata -->
+                    
                     <div class="receipt-meta">
                         <div class="meta-row">
                             <span>ID Transaksi:</span>
@@ -255,7 +255,7 @@
                         <div class="divider-dashed"></div>
                     </div>
 
-                    <!-- Receipt Items -->
+                    
                     <div class="receipt-items">
                         <table class="receipt-table">
                             <thead>
@@ -266,13 +266,13 @@
                                 </tr>
                             </thead>
                             <tbody id="receipt-items-tbody">
-                                <!-- Dynamically loaded from JS -->
+                                
                             </tbody>
                         </table>
                         <div class="divider-dashed"></div>
                     </div>
 
-                    <!-- Receipt Subtotals -->
+                    
                     <div class="receipt-calculations">
                         <div class="calc-row">
                             <span>Subtotal:</span>
@@ -306,13 +306,13 @@
                         </div>
                     </div>
 
-                    <!-- Receipt Footer -->
+                    
                     <div class="receipt-footer">
                         <div class="divider-dashed"></div>
                         <p class="thankyou-msg">☕ Terima Kasih Atas Kunjungan Anda ☕</p>
                         <p class="thankyou-msg">Follow Instagram kami: @kopisibei.cafe</p>
                         
-                        <!-- Simulated Barcode -->
+                        
                         <div class="simulated-barcode">
                             <div class="barcode-line w-large"></div>
                             <div class="barcode-line w-small"></div>
@@ -328,7 +328,7 @@
                 </div>
             </div>
 
-            <!-- Receipt Actions -->
+            
             <div class="modal-footer hide-on-print">
                 <button class="btn-secondary" id="btn-close-receipt-footer" onclick="tutupModal('receipt-modal')">Tutup</button>
                 <button class="btn-primary" id="btn-print-receipt">
@@ -338,7 +338,7 @@
         </div>
     </div>
 
-    <!-- ================= 3. MODAL DETAIL TRANSAKSI (FROM HISTORY) ================= -->
+    
     <div id="tx-detail-modal" class="modal-overlay">
         <div class="modal-content tx-detail-content">
             <div class="modal-header">
@@ -380,7 +380,7 @@
                             </tr>
                         </thead>
                         <tbody id="detail-tx-items-tbody">
-                            <!-- Dynamically loaded from JS -->
+                            
                         </tbody>
                     </table>
                 </div>
@@ -406,7 +406,7 @@
                     </div>
                 </div>
 
-                <!-- QRIS Bukti Transfer View -->
+                
                 <div id="detail-tx-qris-proof-section" class="hidden" style="margin-top: 15px; padding: 12px; border: 1px solid #e1dcd6; border-radius: 8px; background: #faf8f5;">
                     <label style="font-weight: 600; color: #4a3321; display: block; margin-bottom: 8px;">Bukti Transfer QRIS</label>
                     <div style="text-align: center;">
@@ -426,7 +426,6 @@
         </div>
     </div>
 
-
     <div id="logout-modal" class="modal-overlay">
         <div class="modal-content logout-modal-content text-center">
             <div class="logout-icon-wrapper animate-bounce">
@@ -441,7 +440,7 @@
         </div>
     </div>
 
-    <!-- Modal Kamera Absensi -->
+    
     <div id="camera-modal" class="modal-overlay" style="z-index: 300;">
         <div class="modal-content sub-modal-content" style="max-width: 400px; text-align: center; padding: 24px;">
             <div class="modal-header" style="justify-content: center; position: relative;">
@@ -474,7 +473,6 @@
             </div>
         </div>
     </div>
-
 
     <script src="{{ url_for('static', filename='js/kasir.js') }}"></script>
 </body>

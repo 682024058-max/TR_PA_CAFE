@@ -1,36 +1,22 @@
-// ============================================================
-// BEAN & BREW — MANAGER.JS  (Database Integration)
-// API Base: http://127.0.0.1:5000/api
-// Tabel: users, products, transaksi, detail_transaksi, absensi
-// Penggajian: localStorage only (tidak ada endpoint di backend)
-// ============================================================
+
 
 const API_BASE = '/api';
 
-// ── Session ──────────────────────────────────────────────────
 let SESSION = { id: null, nama: 'Manager', role: 'manager' };
 
-// ── Runtime data (di-load dari API) ──────────────────────────
 let MENU_ITEMS   = [];
 let CATEGORIES   = [];
 let CASHIERS     = [];
 let TRANSACTIONS = [];
 let ATTENDANCES  = [];
 
-// ── Penggajian: Database-backed ──
 let PAYROLL = [];
 
-
-// ── Charts ───────────────────────────────────────────────────
 let revenueChart = null;
 let weeklyChart  = null;
 
-// ── Slip gaji context ────────────────────────────────────────
 let _currentSlipData = null;
 
-// ============================================================
-// API HELPERS
-// ============================================================
 function headerApi() {
     return {
         'Content-Type': 'application/json',
@@ -47,9 +33,6 @@ async function ambilDataApi(url, opts = {}) {
     return data;
 }
 
-// ============================================================
-// INIT
-// ============================================================
 document.addEventListener("DOMContentLoaded", () => {
     muatSesi();
     inisialisasiJamRealtime();
@@ -62,14 +45,11 @@ document.addEventListener("DOMContentLoaded", () => {
     inisialisasiPengendaliLaporan();
     inisialisasiPengendaliPenggajian();
 
-    // Load dashboard awal
+    
     muatDataDashboard();
     inisialisasiGrafik();
 });
 
-// ============================================================
-// SESSION
-// ============================================================
 function muatSesi() {
     try {
         const raw = localStorage.getItem('activeUser');
@@ -81,9 +61,6 @@ function muatSesi() {
     } catch(e) { console.error('Session load error:', e); }
 }
 
-// ============================================================
-// REALTIME CLOCK
-// ============================================================
 function inisialisasiJamRealtime() {
     const el = document.getElementById("live-time");
     if (!el) return;
@@ -96,9 +73,6 @@ function inisialisasiJamRealtime() {
     tick(); setInterval(tick, 1000);
 }
 
-// ============================================================
-// PROFILE GREETING
-// ============================================================
 function inisialisasiSalamProfil() {
     const u = JSON.parse(localStorage.getItem("activeUser"));
     if (!u) return;
@@ -108,9 +82,6 @@ function inisialisasiSalamProfil() {
     if (msgEl)  msgEl.textContent  = `Selamat Datang, Manager ${u.nama.split(" ")[0]}! 👋`;
 }
 
-// ============================================================
-// NAVIGATION ROUTER
-// ============================================================
 function inisialisasiRouterNavigasi() {
     const navItems  = document.querySelectorAll(".nav-item");
     const views     = document.querySelectorAll(".app-view");
@@ -128,7 +99,7 @@ function inisialisasiRouterNavigasi() {
             });
             if (pageTitle) pageTitle.textContent = item.querySelector("span").textContent;
 
-            // Reload data per section
+            
             if      (target === "dashboard")           muatDataDashboard();
             else if (target === "kelola-menu")         { muatKategori().then(() => muatDaftarMenu()); pindahTabDalam('daftar-menu'); }
             else if (target === "kelola-kasir")        muatDaftarKasir();
@@ -151,9 +122,6 @@ function inisialisasiRouterNavigasi() {
     });
 }
 
-// ============================================================
-// DASHBOARD
-// ============================================================
 async function muatDataDashboard() {
     try {
         const [txData, usersData] = await Promise.all([
@@ -237,9 +205,6 @@ function tampilkanTabelTransaksiTerbaru() {
     });
 }
 
-// ============================================================
-// CHARTS (real data dari /api/laporan/harian)
-// ============================================================
 function inisialisasiGrafik() {
     const revCtx    = document.getElementById("revenueMonthlyChart");
     const weeklyCtx = document.getElementById("weeklyTxChart");
@@ -307,7 +272,7 @@ async function perbaruiGrafik() {
         revenueChart.data.datasets[0].data = revenueData;
         revenueChart.update();
 
-        // Bar chart: tx count by day of week from in-memory TRANSACTIONS
+        
         const dayMap = [0,0,0,0,0,0,0];
         TRANSACTIONS.forEach(tx => {
             const d = new Date(tx.tanggal_transaksi);
@@ -320,9 +285,6 @@ async function perbaruiGrafik() {
     }
 }
 
-// ============================================================
-// KELOLA MENU (Products CRUD via API)
-// ============================================================
 async function muatDaftarMenu() {
     try {
         const data = await ambilDataApi(`${API_BASE}/products`);
@@ -546,11 +508,8 @@ async function tanganiKirimMenu(e) {
 }
 window.tanganiKirimMenu = tanganiKirimMenu;
 
-// ============================================================
-// KELOLA KATEGORI (CRUD via API)
-// ============================================================
 function inisialisasiCRUDKategori() {
-    // Tampilkan tombol tambah
+    
     const addBtn = document.getElementById("btn-add-category-modal");
     if (addBtn) addBtn.style.display = "";
     
@@ -597,7 +556,6 @@ async function tanganiKirimKategori(e) {
 }
 window.tanganiKirimKategori = tanganiKirimKategori;
 
-
 function tampilkanTabelKategori() {
     const tbody = document.getElementById("categories-table-tbody");
     if (!tbody) return;
@@ -619,9 +577,6 @@ function tampilkanTabelKategori() {
     });
 }
 
-// ============================================================
-// KELOLA KASIR (Users CRUD via API)
-// ============================================================
 async function muatDaftarKasir() {
     try {
         const data = await ambilDataApi(`${API_BASE}/users`);
@@ -638,7 +593,7 @@ function inisialisasiCRUDKasir() {
         document.getElementById("cashier-form")?.reset();
         document.getElementById("cashier-form-id").value = "";
         document.getElementById("cashier-modal-title").textContent = "Buat Akun Kasir Baru";
-        // Tampilkan field password untuk user baru
+        
         const pwWrap = document.getElementById("cashier-password-wrapper");
         if (pwWrap) pwWrap.style.display = "";
         const pwInput = document.getElementById("cashier-form-password");
@@ -675,8 +630,7 @@ function tampilkanTabelKasir() {
                 </button>
             </td>
             <td style="text-align:center">
-                <button class="btn-secondary" onclick="editCashier(${c.id_user})" style="padding:6px 12px;font-size:11px;margin-right:6px"><i class="fa-solid fa-pencil"></i> Edit</button>
-                <button class="btn-danger"    onclick="deleteCashier(${c.id_user})" style="padding:6px 12px;font-size:11px"><i class="fa-solid fa-trash"></i> Hapus</button>
+                <button class="btn-secondary" onclick="editCashier(${c.id_user})" style="padding:6px 12px;font-size:11px"><i class="fa-solid fa-pencil"></i> Edit</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -703,23 +657,12 @@ window.editCashier = function(id) {
     document.getElementById("cashier-form-email").value    = c.email || '';
     document.getElementById("cashier-form-status").value   = c.status;
     document.getElementById("cashier-modal-title").textContent = "Edit Akun Kasir";
-    // Sembunyikan field password saat edit (opsional)
+    
     const pwWrap  = document.getElementById("cashier-password-wrapper");
     const pwInput = document.getElementById("cashier-form-password");
     if (pwWrap)  pwWrap.style.display = "none";
     if (pwInput) { pwInput.required = false; pwInput.value = ""; }
     bukaModal("cashier-modal");
-}
-
-window.deleteCashier = async function(id) {
-    if (!confirm("Apakah Anda yakin ingin menghapus akun kasir ini?")) return;
-    try {
-        await ambilDataApi(`${API_BASE}/users/${id}`, { method: 'DELETE' });
-        tampilkanToast("Akun kasir berhasil dihapus!", "success");
-        await muatDaftarKasir();
-    } catch(e) {
-        tampilkanToast("Gagal hapus kasir: " + e.message, "danger");
-    }
 }
 
 async function tanganiKirimKasir(e) {
@@ -733,13 +676,13 @@ async function tanganiKirimKasir(e) {
 
     try {
         if (idVal) {
-            // Edit: password hanya dikirim jika diisi
+            
             const payload = { nama, username, email, status };
             if (password) payload.password = password;
             await ambilDataApi(`${API_BASE}/users/${idVal}`, { method:'PUT', body: JSON.stringify(payload) });
             tampilkanToast("Akun kasir berhasil diperbarui!", "success");
         } else {
-            // Baru: password wajib
+            
             if (!password) { tampilkanToast("Password wajib diisi untuk akun baru!", "warning"); return; }
             await ambilDataApi(`${API_BASE}/users`, {
                 method: 'POST',
@@ -754,9 +697,6 @@ async function tanganiKirimKasir(e) {
     }
 }
 
-// ============================================================
-// MONITORING ABSENSI (API: GET /api/absensi)
-// ============================================================
 async function muatAbsensi() {
     try {
         const data  = await ambilDataApi(`${API_BASE}/absensi`);
@@ -877,9 +817,6 @@ window.lihatDetailAbsensi = function(id) {
     bukaModal("absensi-detail-modal");
 }
 
-// ============================================================
-// LAPORAN PENJUALAN (GET /api/transaksi + /api/transaksi/<id>)
-// ============================================================
 async function muatTransaksi() {
     try {
         const data   = await ambilDataApi(`${API_BASE}/transaksi`);
@@ -947,7 +884,7 @@ function tampilkanTabelLaporan() {
         return mSearch && mStart && mEnd && mMethod;
     });
 
-    // Update live metric untuk hasil filter
+    
     const filteredRevenue = filtered.reduce((s,t) => s + Number(t.total_harga||0), 0);
     const revEl = document.getElementById("report-total-revenue");
     const txEl  = document.getElementById("report-total-tx-count");
@@ -1035,9 +972,6 @@ window.viewTransactionDetail = async function(id) {
     }
 }
 
-// ============================================================
-// PENGGAJIAN (Database-backed CRUD)
-// ============================================================
 async function muatPenggajian() {
     try {
         const data = await ambilDataApi(`${API_BASE}/payroll`);
@@ -1229,11 +1163,11 @@ window.toggleStatusBayar = async function(id) {
     const isPaid = !!p.buktiTF;
     try {
         if (isPaid) {
-            // Ubah ke Belum Dibayar (hapus bukti)
+            
             await ambilDataApi(`${API_BASE}/payroll/${id}/bukti`, { method: 'DELETE' });
             tampilkanToast("Status penggajian diubah menjadi Belum Dibayar.", "success");
         } else {
-            // Ubah ke Sudah Dibayar (isi dengan penanda LUNAS)
+            
             await ambilDataApi(`${API_BASE}/payroll/${id}/upload-bukti`, {
                 method: 'POST',
                 body: JSON.stringify({ buktiTF: "LUNAS" })
@@ -1281,9 +1215,6 @@ async function tanganiKirimPenggajian(e) {
 }
 window.tanganiKirimPenggajian = tanganiKirimPenggajian;
 
-// ============================================================
-// SLIP GAJI & KIRIM EMAIL
-// ============================================================
 window.openSlipGaji = function(id) {
     const p = PAYROLL.find(x => x.id === id);
     if (!p) return;
@@ -1404,9 +1335,6 @@ window.sendSlipEmail = async function() {
     }
 }
 
-// ============================================================
-// UTILITIES
-// ============================================================
 function formatRupiah(amount) {
     return new Intl.NumberFormat("id-ID", {
         style: "currency", currency: "IDR", minimumFractionDigits: 0
@@ -1427,9 +1355,8 @@ function tampilkanToast(message, type = "info") {
     setTimeout(() => toast.remove(), 3500);
 }
 
-// Generic Excel Export Function (CSV with UTF-8 BOM for Excel compatibility)
 function eksporKeExcel(filename, headers, rows) {
-    let csvContent = "sep=,\n"; // tell Excel to use comma separator
+    let csvContent = "sep=,\n"; 
     csvContent += headers.join(",") + "\n";
     rows.forEach(row => {
         const escapedRow = row.map(val => {
@@ -1754,7 +1681,6 @@ async function kirimLaporanEmail() {
 
 window.pilihGambarTemplat  = function() {};
 window.perbaruiPratinjauGambarMenu = function() {};
-
 
 // ============================================================
 // ALIASES KOMPATIBILITAS (UNTUK KEAMANAN 100%)

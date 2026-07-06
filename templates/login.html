@@ -5,29 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Kopi Sibei - Cafe Management Login</title>
     
-    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome Icons -->
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Custom CSS File -->
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 </head>
 <body>
 
     <div id="toast-container" class="toast-container"></div>
 
-
     <div class="login-wrapper">
         <div class="background-blur-overlay"></div>
         
-        <!-- Central Login Card Container -->
+        
         <main class="login-container">
             <div class="login-card" id="login-card-node">
-                <!-- Cafe Branding & Header -->
+                
                 <header class="login-header">
                     <div class="logo-circle">
                         <i class="fa-solid fa-mug-hot"></i>
@@ -36,9 +35,9 @@
                     <p>Cafe Management System</p>
                 </header>
                 
-                <!-- Credentials Form -->
+                
                 <form id="login-form" onsubmit="tanganiKirimLogin(event)" novalidate>
-                    <!-- Username Group -->
+                    
                     <div class="form-group">
                         <label for="username">Username Karyawan</label>
                         <div class="input-wrapper">
@@ -47,7 +46,7 @@
                         </div>
                     </div>
                     
-                    <!-- Password Group -->
+                    
                     <div class="form-group">
                         <label for="password">Password Akses</label>
                         <div class="input-wrapper">

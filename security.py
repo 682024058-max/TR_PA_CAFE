@@ -19,7 +19,6 @@ def verify_password(hashed_password, plaintext_password):
     if not hashed_password or not plaintext_password:
         return False, False
         
-    # Hash Werkzeug selalu memiliki pemisah titik dua (misal 'pbkdf2:sha256:...' atau 'scrypt:...')
     is_hash = ":" in hashed_password
     
     if is_hash:
@@ -29,7 +28,6 @@ def verify_password(hashed_password, plaintext_password):
         except Exception:
             pass
             
-    # Fallback jika password di DB masih berupa teks biasa (plaintext)
     is_correct = (hashed_password == plaintext_password)
     needs_upgrade = is_correct and not is_hash
     return is_correct, needs_upgrade

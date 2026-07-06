@@ -17,12 +17,12 @@ function inisialisasiPengubahSandi() {
             const isPassword = passwordInput.getAttribute("type") === "password";
             
             if (isPassword) {
-                // Show Password
+                
                 passwordInput.setAttribute("type", "text");
                 eyeIcon.className = "fa-regular fa-eye-slash";
                 toggleBtn.setAttribute("title", "Sembunyikan Password");
             } else {
-                // Hide Password
+                
                 passwordInput.setAttribute("type", "password");
                 eyeIcon.className = "fa-regular fa-eye";
                 toggleBtn.setAttribute("title", "Tampilkan Password");
@@ -30,7 +30,6 @@ function inisialisasiPengubahSandi() {
         });
     }
 }
-
 
 window.tanganiKirimLogin = function(event) {
     event.preventDefault();
@@ -79,17 +78,17 @@ window.tanganiKirimLogin = function(event) {
         body: JSON.stringify({ username: username, password: password })
     })
     .then(response => {
-        // Jika status HTTP tidak 200 OK (terjadi kegagalan otentikasi)
+        
         if (!response.ok) {
             return response.json().then(err => { throw err; });
         }
         return response.json();
     })
 .then(result => {
-        // LOGIN BERHASIL: Tampilkan notifikasi toast sukses
+        
         tampilkanToast(`Login berhasil! Selamat bekerja, ${result.user.nama}.`, "success");
         
-        // Handle remember me state mockup dengan AMAN
+        
         const rememberMeElement = document.getElementById("remember-me");
         if (rememberMeElement) {
             if (rememberMeElement.checked) {
@@ -99,7 +98,7 @@ window.tanganiKirimLogin = function(event) {
             }
         }
         
-        // Simpan data sesi kasir/manager yang aktif ke LocalStorage
+        
         localStorage.setItem("activeUser", JSON.stringify(result.user));
         localStorage.setItem("activeRole", result.role);
         
@@ -112,7 +111,7 @@ window.tanganiKirimLogin = function(event) {
         }, 800);
     })
     .catch(err => {
-        // LOGIN GAGAL: Bersihkan password, kembalikan input aktif
+        
         usernameInput.removeAttribute("disabled");
         passwordInput.removeAttribute("disabled");
         btnSubmit.removeAttribute("disabled");
@@ -120,7 +119,7 @@ window.tanganiKirimLogin = function(event) {
         btnSubmit.querySelector(".btn-text").classList.remove("hidden");
         btnSubmit.querySelector(".btn-loader").classList.add("hidden");
         
-        passwordInput.value = ""; // Bersihkan kolom sandi
+        passwordInput.value = ""; 
         
         usernameInput.classList.add("input-error");
         passwordInput.classList.add("input-error");
@@ -131,7 +130,6 @@ window.tanganiKirimLogin = function(event) {
         passwordInput.focus();
     });
 };
-
 
 function picuGetarKartu(card) {
     if (card) {
@@ -159,7 +157,6 @@ function inisialisasiPendengarFokusInput() {
     }
 }
 
-
 function nonaktifkanZoomBrowser() {
     document.addEventListener('keydown', function(e) {
         if (e.ctrlKey && (
@@ -185,7 +182,6 @@ function nonaktifkanZoomBrowser() {
     }, { passive: false });
 }
 
-// Custom Toast Alerts
 function tampilkanToast(message, type = "info") {
     const container = document.getElementById("toast-container");
     if (!container) return;
@@ -210,10 +206,6 @@ function tampilkanToast(message, type = "info") {
     }, 3000);
 }
 
-
-// ============================================================
-// ALIASES KOMPATIBILITAS (UNTUK KEAMANAN 100%)
-// ============================================================
 window.openModal = window.bukaModal;
 window.closeModal = window.tutupModal;
 window.showToast = window.tampilkanToast;

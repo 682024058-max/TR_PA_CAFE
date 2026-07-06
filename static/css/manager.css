@@ -1,35 +1,31 @@
-/* =======================================================
-   KOPI SIBEI - POS CAFE MANAGER STYLESHEET
-   Aesthetics: Clean Warm Cafe, Minimalist, Professional
-   ======================================================= */
 
-/* ================= ROOT VARIABLES ================= */
+
 :root {
-    /* Brand Color Palette */
-    --espresso-dark: #2c1a11;      /* Deep rich roast */
-    --espresso-base: #3d2519;      /* Medium roast */
-    --caramel-gold: #c68a4c;       /* Warm caramel syrup */
-    --caramel-light: #dca76e;      /* Creamy caramel foam */
-    --crema-milk: #fcf9f5;         /* Warm milk froth */
-    --cinnamon-mute: #9e8a7c;      /* Soft dust cinnamon */
-    --sand-bg: #faf7f2;            /* Luxurious clean table */
+    
+    --espresso-dark: #2c1a11;      
+    --espresso-base: #3d2519;      
+    --caramel-gold: #c68a4c;       
+    --caramel-light: #dca76e;      
+    --crema-milk: #fcf9f5;         
+    --cinnamon-mute: #9e8a7c;      
+    --sand-bg: #faf7f2;            
     --white: #ffffff;
     
-    /* Semantic Colors */
-    --text-dark: #20130b;          /* Charcoal Coffee */
-    --text-muted: #8c7a6b;         /* Muted Cinnamon */
-    --border-color: #ede7de;       /* Soft Dividers */
     
-    --success: #4fa375;            /* Sage Green */
+    --text-dark: #20130b;          
+    --text-muted: #8c7a6b;         
+    --border-color: #ede7de;       
+    
+    --success: #4fa375;            
     --success-bg: #eaf6ef;
-    --danger: #d94e4e;             /* Berry Red */
+    --danger: #d94e4e;             
     --danger-bg: #fdf2f2;
-    --warning: #f4a261;            /* Honey Amber */
+    --warning: #f4a261;            
     --warning-bg: #ffe8d6;
     --info: #4a90e2;
     --info-bg: #e1f0ff;
     
-    /* Layout Variables */
+    
     --sidebar-width: 260px;
     --navbar-height: 70px;
     --border-radius-sm: 8px;
@@ -37,13 +33,12 @@
     --border-radius-lg: 16px;
     --transition-speed: 0.25s;
     
-    /* Shadows */
+    
     --shadow-sm: 0 2px 8px rgba(44, 26, 17, 0.04);
     --shadow-md: 0 8px 24px rgba(44, 26, 17, 0.06);
     --shadow-lg: 0 16px 32px rgba(44, 26, 17, 0.1);
 }
 
-/* ================= RESET & GENERAL ================= */
 * {
     margin: 0;
     padding: 0;
@@ -61,7 +56,6 @@ body {
     touch-action: pan-x pan-y;
 }
 
-/* Scrollbar customization */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -77,7 +71,6 @@ body {
     background: var(--espresso-base);
 }
 
-/* ================= SHELL LAYOUT ================= */
 .app-container {
     display: flex;
     width: 100%;
@@ -85,7 +78,6 @@ body {
     overflow: hidden;
 }
 
-/* Sidebar Styling */
 .sidebar {
     width: var(--sidebar-width);
     background-color: var(--espresso-dark);
@@ -249,7 +241,6 @@ body {
     box-shadow: 0 4px 12px rgba(217, 78, 78, 0.2);
 }
 
-/* Main Content Wrapper */
 .main-wrapper {
     flex: 1;
     display: flex;
@@ -259,7 +250,6 @@ body {
     position: relative;
 }
 
-/* Navbar Atas */
 .navbar {
     height: var(--navbar-height);
     background-color: var(--white);
@@ -317,7 +307,6 @@ body {
     font-size: 14px;
 }
 
-/* Content Body */
 .content-body {
     flex: 1;
     padding: 24px;
@@ -326,7 +315,6 @@ body {
     position: relative;
 }
 
-/* ================= SPA VIEW STATES ================= */
 .app-view {
     display: none;
     height: 100%;
@@ -336,9 +324,6 @@ body {
     display: block;
 }
 
-/* ================= 1. VIEW: DASHBOARD ================= */
-
-/* Welcome Banner */
 .welcome-banner {
     background: linear-gradient(135deg, var(--espresso-base), var(--espresso-dark));
     border-radius: var(--border-radius-lg);
@@ -384,7 +369,6 @@ body {
     opacity: 0.85;
 }
 
-/* Stats Cards */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -419,7 +403,6 @@ body {
     font-size: 20px;
 }
 
-/* Color codes */
 .bg-cream-soft { background-color: rgba(198, 138, 76, 0.1); }
 .bg-green-soft { background-color: rgba(79, 163, 117, 0.1); }
 .bg-blue-soft { background-color: rgba(74, 144, 226, 0.1); }
@@ -459,7 +442,6 @@ body {
     color: var(--success);
 }
 
-/* Dashboard Details Grid */
 .dashboard-details-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -518,7 +500,6 @@ body {
     justify-content: center;
 }
 
-/* Tables styling */
 .table-responsive {
     overflow-x: auto;
     width: 100%;
@@ -551,7 +532,6 @@ body {
     background-color: var(--sand-bg);
 }
 
-/* Badges */
 .badge {
     padding: 4px 10px;
     border-radius: 30px;
@@ -566,7 +546,6 @@ body {
 .badge-warning { background-color: var(--warning-bg); color: var(--warning); }
 .badge-danger { background-color: var(--danger-bg); color: var(--danger); }
 
-/* ================= FILTERS TOOLBAR ================= */
 .riwayat-filter-header {
     padding: 16px 20px;
     border-bottom: 1px solid var(--border-color);
@@ -664,7 +643,6 @@ body {
     background-color: var(--border-color);
 }
 
-/* ================= INNER TAB BAR (Kelola Menu) ================= */
 .inner-tab-bar {
     display: flex;
     gap: 0;
@@ -711,7 +689,6 @@ body {
     display: block;
 }
 
-/* Menu Table Thumbnail */
 .menu-thumb-img {
     width: 52px;
     height: 52px;
@@ -721,7 +698,6 @@ body {
     display: block;
 }
 
-/* Category Pill Badge */
 .category-pill {
     display: inline-block;
     padding: 3px 10px;
@@ -734,8 +710,6 @@ body {
     color: var(--espresso-base);
     border: 1px solid rgba(61, 37, 25, 0.12);
 }
-
-/* ================= 2. VIEW: KELOLA MENU GRID ================= */
 
 .menu-manager-grid {
     display: grid;
@@ -824,7 +798,6 @@ body {
     color: var(--white);
 }
 
-/* ================= ACTIONS BUTTONS ================= */
 .btn-primary {
     background: linear-gradient(135deg, var(--caramel-gold), var(--espresso-base));
     color: var(--white);
@@ -888,7 +861,6 @@ body {
 .mt-24 { margin-top: 24px; }
 .mt-12 { margin-top: 12px; }
 
-/* ================= MODAL BASE STYLING ================= */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -959,7 +931,6 @@ body {
 
 .justify-center { justify-content: center; }
 
-/* Form Elements inside Modals */
 .crud-modal-content {
     width: 600px;
 }
@@ -1021,7 +992,6 @@ body {
     color: var(--danger);
 }
 
-/* Image Upload & templates */
 .form-image-side {
     display: flex;
     flex-direction: column;
@@ -1108,7 +1078,6 @@ body {
     border-color: var(--caramel-gold);
 }
 
-/* ================= MENU MODAL SLIM (New Design) ================= */
 .menu-modal-slim {
     width: 420px;
 }
@@ -1120,7 +1089,6 @@ body {
     gap: 16px;
 }
 
-/* Photo Upload Area */
 .menu-photo-upload {
     width: 100%;
     height: 160px;
@@ -1171,7 +1139,6 @@ body {
     font-weight: 600;
 }
 
-/* Textarea */
 .menu-form-body textarea {
     padding: 10px 12px;
     border-radius: var(--border-radius-sm);
@@ -1192,7 +1159,6 @@ body {
     outline: none;
 }
 
-/* Harga with Rp prefix */
 .harga-input-wrapper {
     display: flex;
     align-items: center;
@@ -1227,7 +1193,6 @@ body {
     background-color: var(--white);
 }
 
-/* Footer buttons */
 .menu-modal-footer {
     justify-content: flex-end;
     gap: 12px;
@@ -1267,7 +1232,6 @@ body {
     background-color: var(--espresso-base);
 }
 
-/* ================= SLIP GAJI MODAL ================= */
 .slip-gaji-content {
     width: 460px;
 }
@@ -1277,7 +1241,6 @@ body {
     background-color: var(--sand-bg);
 }
 
-/* Brand Header */
 .slip-header-brand {
     display: flex;
     align-items: center;
@@ -1327,7 +1290,6 @@ body {
     margin: 12px 0;
 }
 
-/* Info Rows */
 .slip-info-grid {
     display: flex;
     flex-direction: column;
@@ -1352,7 +1314,6 @@ body {
     color: var(--text-dark);
 }
 
-/* Detail Rows */
 .slip-detail-rows {
     margin: 8px 0;
     display: flex;
@@ -1373,7 +1334,6 @@ body {
     color: var(--text-muted);
 }
 
-/* Total Box */
 .slip-total-box {
     display: flex;
     justify-content: space-between;
@@ -1405,12 +1365,10 @@ body {
     margin: 0;
 }
 
-/* Footer */
 .slip-gaji-footer {
     justify-content: space-between;
 }
 
-/* ===== Bukti Transfer Upload ===== */
 .bukti-tf-section {
     margin: 12px 0 8px;
 }
@@ -1507,7 +1465,6 @@ body {
     opacity: 0.7;
 }
 
-/* Tombol Kirim di tabel */
 .btn-slip-send {
     padding: 6px 10px;
     font-size: 11px;
@@ -1528,7 +1485,6 @@ body {
     border-color: rgba(34, 139, 34, 0.4);
 }
 
-/* Tombol Kirim Email di modal */
 .btn-slip-email {
     display: inline-flex;
     align-items: center;
@@ -1549,9 +1505,6 @@ body {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(34, 139, 34, 0.25);
 }
-
-/* ================= 4. MODAL DETIL TRANSAKSI ================= */
-
 
 .tx-detail-content {
     width: 580px;
@@ -1625,7 +1578,6 @@ body {
     color: var(--text-dark);
 }
 
-/* ================= 6. MODAL PENGGAJIAN ================= */
 .payroll-modal-content {
     width: 520px;
 }
@@ -1645,8 +1597,6 @@ body {
     align-items: center;
     justify-content: center;
 }
-
-/* ================= 7. MODAL LOGOUT CONFIRM ================= */
 
 .logout-modal-content {
     width: 360px;
@@ -1680,7 +1630,6 @@ body {
     margin-bottom: 20px;
 }
 
-/* ================= TOAST NOTIFICATION STYLING ================= */
 .toast-container {
     position: fixed;
     top: 24px;
@@ -1730,7 +1679,6 @@ body {
     100% { opacity: 0; transform: translateX(30px); }
 }
 
-/* ================= RESPONSIVENESS ================= */
 @media (max-width: 1200px) {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -1776,7 +1724,7 @@ body {
     }
     
     .sidebar-footer {
-        display: none; /* Hide profile and logout at bottom on mobile */
+        display: none; 
     }
     
     .sidebar-toggle {

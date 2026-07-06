@@ -1,20 +1,9 @@
-// ============================================================
-// KOPI SIBEI — KASIR.JS  (disesuaikan struktur DB nyata)
-//
-// products : id_product, nama_product, kategori(enum), harga, icon, warna
-// transaksi: id_transaksi, id_user, tanggal_transaksi, total_harga,
-//            metode_pembayaran, uang_bayar, kembalian, status_transaksi
-// detail   : id_detail, id_transaksi, id_products, qty, subtotal
-// absensi  : id_absensi, date, nama_kasir, jam_masuk, jam_keluar,
-//            total_jam, status, waktu_dibuat
-// ============================================================
+
 
 const API_BASE = '/api';
 
-// ── Session ──────────────────────────────────────────────────
 let SESSION = { id: null, nama: 'Kasir', role: 'kasir' };
 
-// ── State Global ─────────────────────────────────────────────
 let MENU_ITEMS     = [];
 let transactions   = [];
 let historyTransactions = [];
@@ -25,11 +14,10 @@ let searchQuery    = '';
 let salesChart     = null;
 let qrisFotoBase64 = null;
 let currentAttendance = {
-    status: 'Belum Absen',   // Belum Absen | Aktif Bekerja | Selesai Shift
+    status: 'Belum Absen',   
     clockIn: '', clockOut: '', activeDate: '', id_absensi: null
 };
 
-// Label cantik untuk kategori enum
 const KATEGORI_LABEL = {
     'coffee'    : '☕ Coffee',
     'non-coffee': '🥤 Non Coffee',
@@ -37,24 +25,19 @@ const KATEGORI_LABEL = {
     'dessert'   : '🍰 Dessert'
 };
 
-// ── Header request — WAJIB sertakan X-User-Name ──────────────
 function headerApi() {
     return {
         'Content-Type': 'application/json',
         'X-User-Role' : SESSION.role,
         'X-User-Id'   : SESSION.id,
-        'X-User-Name' : SESSION.nama   // dipakai absensi (nama_kasir)
+        'X-User-Name' : SESSION.nama   
     };
 }
 
-// Alias untuk kompatibilitas
 function apiHeaders() {
     return headerApi();
 }
 
-// ============================================================
-//  INIT
-// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     loadSession();
     initRealtimeClock();
@@ -69,16 +52,13 @@ document.addEventListener('DOMContentLoaded', () => {
     disableBrowserZooming();
     initChart();
 
-    // Load semua data dari database
+    
     loadKategoriDanProduk();
     loadTransaksiHariIni();
     muatAbsensiHariIni();
     loadRiwayatAbsensi();
 });
 
-// ============================================================
-//  CLOSE RECEIPT MODAL (Tombol X & Klik di Luar)
-// ============================================================
 function initReceiptModalClose() {
     const btnCloseStruk = document.getElementById('btn-close-struk');
     const receiptModal = document.getElementById('receipt-modal');
@@ -98,9 +78,6 @@ function initReceiptModalClose() {
     }
 }
 
-// ============================================================
-//  SESSION — baca dari localStorage setelah login
-// ============================================================
 function loadSession() {
     try {
         const raw = localStorage.getItem('activeUser');
@@ -119,9 +96,6 @@ function loadSession() {
         welcomeEl.innerText = `Selamat Datang Kembali, ${SESSION.nama.split(' ')[0]}! 👋`;
 }
 
-// ============================================================
-//  KATEGORI → tabs dinamis → PRODUK
-// ============================================================
 async function loadKategoriDanProduk() {
     try {
         const res  = await fetch(`${API_BASE}/kategori`);
@@ -152,9 +126,6 @@ function tampilkanTabKategori(list) {
     inisialisasiFilterPOS();
 }
 
-// ============================================================
-//  PRODUK — GET /api/products
-// ============================================================
 async function muatProduk() {
     const grid = document.getElementById('menu-grid-container');
     if (grid) grid.innerHTML =
@@ -189,9 +160,6 @@ async function muatProduk() {
     }
 }
 
-// ============================================================
-//  RENDER MENU GRID
-// ============================================================
 function tampilkanMenuPOS(items) {
     const grid = document.getElementById('menu-grid-container');
     if (!grid) return;
@@ -231,9 +199,6 @@ function tampilkanMenuPOS(items) {
     });
 }
 
-// ============================================================
-//  FILTER MENU
-// ============================================================
 function inisialisasiFilterPOS() {
     const tabContainer = document.querySelector('.category-tabs');
     if (tabContainer) {
@@ -266,9 +231,6 @@ function terapkanFilterMenu() {
     tampilkanMenuPOS(filtered);
 }
 
-// ============================================================
-//  CART
-// ============================================================
 function initCartInteractions() {
     document.getElementById('btn-reset-cart')?.addEventListener('click', () => {
         if (cart.length > 0) { aturUlangStatusKeranjang(); tampilkanToast('Keranjang dikosongkan', 'success'); }
@@ -366,9 +328,6 @@ function perbaruiTotalKeranjang(sub, tax, svc, total) {
     document.getElementById('cart-grand-total').innerText = formatRupiah(total);
 }
 
-// ============================================================
-//  PAYMENT
-// ============================================================
 function initPaymentInteractions() {
     const checkoutBtn = document.getElementById('btn-pay-checkout');
     const cashInput   = document.getElementById('cash-tendered');
@@ -387,7 +346,7 @@ function initPaymentInteractions() {
         document.getElementById('payment-change').innerText = 'Rp0';
         document.getElementById('insufficient-funds-alert').classList.add('hidden');
         
-        // Reset QRIS state
+        
         qrisFotoBase64 = null;
         document.getElementById('qris-proof-section').classList.add('hidden');
         const qrisPreviewImg = document.getElementById('qris-preview-img');
@@ -436,7 +395,7 @@ function initPaymentInteractions() {
         });
     });
 
-    // QRIS Upload / Ambil Foto Interactions
+    
     const btnTakeQrisPhoto = document.getElementById('btn-take-qris-photo');
 
     btnTakeQrisPhoto?.addEventListener('click', async () => {
@@ -563,9 +522,6 @@ async function prosesCheckoutAktif() {
     }
 }
 
-// ============================================================
-//  STRUK / RECEIPT
-// ============================================================
 function simulasikanCetakStruk(tx, isReprint = false) {
     document.getElementById('print-loading-overlay')?.classList.add('hidden');
     bukaModal('receipt-modal');
@@ -618,9 +574,6 @@ function simulasikanCetakStruk(tx, isReprint = false) {
     }
 }
 
-// ============================================================
-//  TRANSAKSI — GET dari database
-// ============================================================
 async function loadTransaksiHariIni() {
     const dObj = new Date();
     const year = dObj.getFullYear();
@@ -650,9 +603,6 @@ async function loadTransaksiHariIni() {
     } catch (e) { console.error('Gagal load transaksi:', e); }
 }
 
-// ============================================================
-//  RIWAYAT TRANSAKSI (Filter & Load)
-// ============================================================
 async function loadRiwayatTransaksi(selectedDate = '') {
     try {
         let url = `${API_BASE}/transaksi`;
@@ -825,9 +775,6 @@ window.bukaDetailTransaksi = window.openTransactionDetails = async function (txI
     }
 };
 
-// ============================================================
-//  ABSENSI — TERHUBUNG KE DATABASE
-// ============================================================
 async function muatAbsensiHariIni() {
     if (!SESSION.nama) return;
     const today = new Date().toISOString().slice(0, 10);
@@ -921,7 +868,7 @@ window.closeCameraModal = function() {
 };
 
 function initAttendanceInteractions() {
-    // ── ABSEN MASUK ──
+    
     document.getElementById('btn-clock-in')?.addEventListener('click', async () => {
         if (currentAttendance.status !== 'Belum Absen') return;
         if (!SESSION.nama) { tampilkanToast('Session tidak ditemukan, login ulang','danger'); return; }
@@ -985,7 +932,7 @@ function initAttendanceInteractions() {
         }
     });
 
-    // ── ABSEN KELUAR ──
+    
     document.getElementById('btn-clock-out')?.addEventListener('click', async () => {
         if (currentAttendance.status !== 'Aktif Bekerja') return;
         if (!sudahBekerjaDelapanJam()) {
@@ -1129,9 +1076,6 @@ function tampilkanLogAbsensi() {
     });
 }
 
-// ============================================================
-//  DASHBOARD METRICS
-// ============================================================
 function perbaruiMetrikDashboard() {
     document.getElementById('stat-total-tx').innerText =
         transactions.length;
@@ -1211,9 +1155,6 @@ function tampilkanTabelTransaksiTerbaru() {
     });
 }
 
-// ============================================================
-//  CHART
-// ============================================================
 function initChart() {
     const ctx = document.getElementById('salesChart');
     if (!ctx) return;
@@ -1258,9 +1199,6 @@ function perbaruiGrafik() {
     salesChart.update();
 }
 
-// ============================================================
-//  NAVIGATION ROUTER
-// ============================================================
 function initNavigationRouter() {
     const navItems  = document.querySelectorAll('.nav-item');
     const pageTitle = document.getElementById('page-title');
@@ -1284,9 +1222,6 @@ function initNavigationRouter() {
         document.querySelector('.nav-item[data-target="riwayat"]')?.click());
 }
 
-// ============================================================
-//  MODAL & LOGOUT
-// ============================================================
 function initGeneralModalTriggers() {
     document.getElementById('btn-logout-sidebar')?.addEventListener('click', () => bukaModal('logout-modal'));
     document.getElementById('btn-confirm-logout')?.addEventListener('click', () => {
@@ -1298,9 +1233,6 @@ function initGeneralModalTriggers() {
     });
 }
 
-// ============================================================
-//  HELPERS
-// ============================================================
 function formatTanggal(dateStr, dateOnly=false, timeOnly=false) {
     if (!dateStr) return '-';
     const d = new Date(dateStr);

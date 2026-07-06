@@ -1,6 +1,5 @@
-/* ============================================ */
-/* HORIZONTAL FILTER LAYOUT */
-/* ============================================ */
+
+
 .filter-container {
     padding: 20px 0;
     border-bottom: 1px solid #f0e9df;
@@ -105,7 +104,6 @@
     border-color: #4a3321;
 }
 
-/* Responsive untuk mobile */
 @media (max-width: 768px) {
     .filter-wrapper {
         flex-direction: column;

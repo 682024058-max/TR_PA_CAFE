@@ -5,28 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Kopi Sibei - Cafe Manager Dashboard</title>
     
-    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome Icons -->
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Chart.js for beautiful graphs -->
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- Custom CSS File -->
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/manager.css') }}">
 </head>
 <body>
-    <!-- Toast Notification Container -->
+    
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Main App Container -->
+    
     <div class="app-container">
         
-        <!-- ================= SIDEBAR MENU ================= -->
+        
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo-wrapper">
@@ -61,7 +61,7 @@
                 </ul>
             </nav>
             
-            <!-- Sidebar Footer: Active Manager Profile -->
+            
             <div class="sidebar-footer">
                 <div class="cashier-info">
                     <div class="cashier-details">
@@ -75,10 +75,10 @@
             </div>
         </aside>
 
-        <!-- ================= MAIN CONTENT WRAPPER ================= -->
+        
         <div class="main-wrapper">
             
-            <!-- Navbar Atas -->
+            
             <header class="navbar">
                 <div class="navbar-left">
                     <button class="sidebar-toggle" id="sidebar-toggle-btn">
@@ -88,7 +88,7 @@
                 </div>
                 
                 <div class="navbar-right">
-                    <!-- Real-time Clock -->
+                    
                     <div class="realtime-clock">
                         <i class="fa-regular fa-clock"></i>
                         <span id="live-time">Rabu, 27 Mei 2026 | 12:00:00</span>
@@ -96,7 +96,7 @@
                 </div>
             </header>
 
-            <!-- Main App Content -->
+            
             <main class="content-body">
                 
                 {% include 'manager/dashboard.html' %}
@@ -109,11 +109,11 @@
         </div>
     </div>
 
-    <!-- ======================================================= -->
-    <!-- ==================== MODALS AREA ===================== -->
-    <!-- ======================================================= -->
+    
+    
+    
 
-    <!-- ================= 1. MODAL KELOLA MENU (ADD & EDIT) ================= -->
+    
     <div id="menu-modal" class="modal-overlay">
         <div class="modal-content menu-modal-slim">
             <div class="modal-header">
@@ -127,7 +127,7 @@
 
                 <div class="menu-form-body">
 
-                    <!-- Foto Upload Area -->
+                    
                     <div class="form-group">
                         <label>Foto Menu</label>
                         <div class="menu-photo-upload" id="menu-photo-upload-area" onclick="document.getElementById('menu-file-input').click()">
@@ -140,27 +140,27 @@
                         <input type="file" id="menu-file-input" accept="image/*" style="display:none" onchange="tanganiUnggahBerkasMenu(this)">
                     </div>
 
-                    <!-- Nama Menu -->
+                    
                     <div class="form-group">
                         <label for="menu-form-name">Nama Menu <span class="required">*</span></label>
                         <input type="text" id="menu-form-name" required placeholder="Contoh: Caramel Macchiato">
                     </div>
 
-                    <!-- Deskripsi -->
+                    
                     <div class="form-group">
                         <label for="menu-form-desc">Deskripsi</label>
                         <textarea id="menu-form-desc" rows="3" placeholder="Contoh: Signature espresso with vanilla and caramel"></textarea>
                     </div>
 
-                    <!-- Kategori -->
+                    
                     <div class="form-group">
                         <label for="menu-form-category">Kategori <span class="required">*</span></label>
                         <select id="menu-form-category" required>
-                            <!-- Dynamically populated -->
+                            
                         </select>
                     </div>
 
-                    <!-- Harga -->
+                    
                     <div class="form-group">
                         <label for="menu-form-price">Harga <span class="required">*</span></label>
                         <div class="harga-input-wrapper">
@@ -179,7 +179,7 @@
         </div>
     </div>
 
-    <!-- ================= 2. MODAL KELOLA KATEGORI ================= -->
+    
 
     <div id="category-modal" class="modal-overlay">
         <div class="modal-content sub-modal-content">
@@ -208,7 +208,7 @@
         </div>
     </div>
 
-    <!-- ================= 3. MODAL KELOLA KASIR ================= -->
+    
     <div id="cashier-modal" class="modal-overlay">
         <div class="modal-content sub-modal-content">
             <div class="modal-header">
@@ -245,7 +245,7 @@
                         </select>
                     </div>
 
-                    <!-- Password: wajib saat buat akun baru, opsional saat edit -->
+                    
                     <div class="form-group mt-12" id="cashier-password-wrapper">
                         <label for="cashier-form-password">Password <span class="required">*</span></label>
                         <input type="password" id="cashier-form-password" placeholder="Isi password untuk akun baru" autocomplete="new-password">
@@ -263,7 +263,7 @@
         </div>
     </div>
 
-    <!-- ================= 4. MODAL DETAIL TRANSAKSI ================= -->
+    
     <div id="tx-detail-modal" class="modal-overlay">
         <div class="modal-content tx-detail-content">
             <div class="modal-header">
@@ -305,7 +305,7 @@
                             </tr>
                         </thead>
                         <tbody id="tx-detail-items-tbody">
-                            <!-- Injected via JS -->
+                            
                         </tbody>
                     </table>
                 </div>
@@ -331,7 +331,7 @@
                     </div>
                 </div>
 
-                <!-- QRIS Bukti Transfer View -->
+                
                 <div id="tx-detail-qris-proof-section" class="hidden" style="margin-top: 15px; padding: 12px; border: 1px solid #e1dcd6; border-radius: 8px; background: #faf8f5;">
                     <label style="font-weight: 600; color: #4a3321; display: block; margin-bottom: 8px;">Bukti Transfer QRIS</label>
                     <div style="text-align: center;">
@@ -348,7 +348,7 @@
         </div>
     </div>
 
-    <!-- ================= 5. MODAL DETAIL ABSENSI ================= -->
+    
     <div id="absensi-detail-modal" class="modal-overlay">
         <div class="modal-content sub-modal-content">
             <div class="modal-header">
@@ -401,7 +401,7 @@
         </div>
     </div>
 
-    <!-- ================= 6. MODAL PENGGAJIAN (ADD & EDIT) ================= -->
+    
     <div id="payroll-modal" class="modal-overlay">
         <div class="modal-content payroll-modal-content">
             <div class="modal-header">
@@ -413,21 +413,21 @@
                 <input type="hidden" id="payroll-form-id">
 
                 <div class="card-body">
-                    <!-- Nama Kasir -->
+                    
                     <div class="form-group">
                         <label for="payroll-form-cashier">Nama Kasir <span class="required">*</span></label>
                         <select id="payroll-form-cashier" required>
-                            <!-- Dynamically populated from CASHIERS -->
+                            
                         </select>
                     </div>
 
-                    <!-- Periode -->
+                    
                     <div class="form-group mt-12">
                         <label for="payroll-form-period">Periode Gaji <span class="required">*</span></label>
                         <input type="month" id="payroll-form-period" required>
                     </div>
 
-                    <!-- Bayaran/Shift & Total Shift -->
+                    
                     <div class="form-row-2 mt-12">
                         <div class="form-group">
                             <label for="payroll-form-rate">Bayaran per Shift (Rp) <span class="required">*</span></label>
@@ -442,7 +442,7 @@
                         </div>
                     </div>
 
-                    <!-- Total Gaji (auto-calc) -->
+                    
                     <div class="form-group mt-12">
                         <label>Total Gaji</label>
                         <div class="payroll-total-display" id="payroll-total-display">Rp 0</div>
@@ -459,7 +459,7 @@
         </div>
     </div>
 
-    <!-- ================= 7. MODAL SLIP GAJI (PREVIEW & KIRIM EMAIL) ================= -->
+    
     <div id="slip-gaji-modal" class="modal-overlay">
         <div class="modal-content slip-gaji-content">
             <div class="modal-header">
@@ -468,7 +468,7 @@
             </div>
 
             <div class="slip-gaji-body">
-                <!-- Slip Header -->
+                
                 <div class="slip-header-brand">
                     <div class="slip-logo"><i class="fa-solid fa-mug-hot"></i></div>
                     <div>
@@ -479,7 +479,7 @@
                 <div class="slip-divider"></div>
                 <h4 class="slip-title">SLIP GAJI KARYAWAN</h4>
 
-                <!-- Info Grid -->
+                
                 <div class="slip-info-grid">
                     <div class="slip-info-row">
                         <span class="slip-label">Nama Karyawan</span>
@@ -501,7 +501,7 @@
 
                 <div class="slip-divider"></div>
 
-                <!-- Rincian Gaji -->
+                
                 <div class="slip-detail-rows">
                     <div class="slip-detail-row">
                         <span>Bayaran per Shift</span>
@@ -518,7 +518,7 @@
                     <strong id="slip-total">Rp 0</strong>
                 </div>
 
-                <!-- Bukti Transfer Upload -->
+                
                 <div class="bukti-tf-section">
                     <div class="bukti-tf-label">
                         <i class="fa-solid fa-image"></i>
@@ -550,8 +550,7 @@
         </div>
     </div>
 
-
-    <!-- ================= 7. MODAL KONFIRMASI KELUAR ================= -->
+    
     <div id="logout-confirm-modal" class="modal-overlay">
         <div class="modal-content logout-modal-content">
             <div class="logout-icon-wrapper animate-bounce">
