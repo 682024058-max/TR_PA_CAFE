@@ -495,6 +495,14 @@ async function prosesCheckoutAktif() {
             return;
         }
         change = cashPaid - grandTotal;
+    } else if (method === 'QRIS') {
+        if (!qrisFotoBase64) {
+            tampilkanToast('Bukti transfer QRIS wajib diambil!', 'danger');
+            document.querySelector('.payment-modal-content').classList.add('modal-shake');
+            setTimeout(() =>
+                document.querySelector('.payment-modal-content').classList.remove('modal-shake'), 500);
+            return;
+        }
     }
 
     const sub = cart.reduce((s, i) => s + i.price * i.qty, 0);
