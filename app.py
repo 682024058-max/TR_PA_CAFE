@@ -208,8 +208,18 @@ def add_user():
     conn = None
     try:
         conn = get_db()
-        hashed_pw = hash_password(data['password'])
         with conn.cursor() as cur:
+            # Check username uniqueness
+            cur.execute("SELECT id_user FROM users WHERE username=%s", (data['username'],))
+            if cur.fetchone():
+                return jsonify({"status":"error","message":"Username sudah digunakan oleh pengguna lain."}), 409
+
+            # Check email uniqueness
+            cur.execute("SELECT id_user FROM users WHERE email=%s", (data['email'],))
+            if cur.fetchone():
+                return jsonify({"status":"error","message":"Email sudah digunakan oleh pengguna lain."}), 409
+
+            hashed_pw = hash_password(data['password'])
             cur.execute(
                 "INSERT INTO users (nama,username,password,email,role,status) VALUES (%s,%s,%s,%s,%s,'aktif')",
                 (data['nama'],data['username'],hashed_pw,data['email'],data['role'])
@@ -230,8 +240,20 @@ def update_user(id_user):
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # Check username uniqueness if provided and changed
+            if 'username' in data and data['username']:
+                cur.execute("SELECT id_user FROM users WHERE username=%s AND id_user!=%s", (data['username'], id_user))
+                if cur.fetchone():
+                    return jsonify({"status":"error","message":"Username sudah digunakan oleh pengguna lain."}), 409
+
+            # Check email uniqueness if provided and changed
+            if 'email' in data and data['email']:
+                cur.execute("SELECT id_user FROM users WHERE email=%s AND id_user!=%s", (data['email'], id_user))
+                if cur.fetchone():
+                    return jsonify({"status":"error","message":"Email sudah digunakan oleh pengguna lain."}), 409
+
             fields, values = [], []
-            for col in ['nama','email','role','status','password']:
+            for col in ['nama','username','email','role','status','password']:
                 if col in data and data[col] is not None:
                     val = data[col]
                     if col == 'password':
@@ -242,6 +264,8 @@ def update_user(id_user):
             values.append(id_user)
             cur.execute(f"UPDATE users SET {', '.join(fields)} WHERE id_user=%s", values)
         return jsonify({"status":"success","message":"User berhasil diperbarui."}), 200
+    except pymysql.err.IntegrityError:
+        return jsonify({"status":"error","message":"Username atau email sudah digunakan."}), 409
     except Exception as e:
         return jsonify({"status":"error","message":str(e)}), 500
     finally:

@@ -734,7 +734,7 @@ async function tanganiKirimKasir(e) {
     try {
         if (idVal) {
             // Edit: password hanya dikirim jika diisi
-            const payload = { nama, email, status };
+            const payload = { nama, username, email, status };
             if (password) payload.password = password;
             await ambilDataApi(`${API_BASE}/users/${idVal}`, { method:'PUT', body: JSON.stringify(payload) });
             tampilkanToast("Akun kasir berhasil diperbarui!", "success");
