@@ -438,30 +438,6 @@ function initPaymentInteractions() {
 
     // QRIS Upload / Ambil Foto Interactions
     const btnTakeQrisPhoto = document.getElementById('btn-take-qris-photo');
-    const btnUploadQrisTrigger = document.getElementById('btn-upload-qris-file-trigger');
-    const qrisFileInput = document.getElementById('qris-file-input');
-
-    btnUploadQrisTrigger?.addEventListener('click', () => {
-        qrisFileInput?.click();
-    });
-
-    qrisFileInput?.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                qrisFotoBase64 = event.target.result;
-                const previewImg = document.getElementById('qris-preview-img');
-                const previewPlaceholder = document.getElementById('qris-preview-placeholder');
-                if (previewImg && previewPlaceholder) {
-                    previewImg.src = qrisFotoBase64;
-                    previewImg.classList.remove('hidden');
-                    previewPlaceholder.classList.add('hidden');
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-    });
 
     btnTakeQrisPhoto?.addEventListener('click', async () => {
         bukaModal('camera-modal');
