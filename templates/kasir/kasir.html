@@ -150,6 +150,31 @@
                         <h2 id="payment-change">Rp0</h2>
                     </div>
 
+                    <!-- QRIS Bukti Transfer Section -->
+                    <div class="detail-box qris-proof-box hidden" id="qris-proof-section" style="border: 1px solid #e1dcd6; border-radius: 8px; padding: 12px; background: #faf8f5;">
+                        <label style="font-weight: 600; color: #4a3321; display: block; margin-bottom: 8px;">Foto Bukti Transfer QRIS</label>
+                        <div class="qris-proof-wrapper" style="text-align: center;">
+                            <!-- Photo Preview -->
+                            <div id="qris-preview-container" style="width: 100%; height: 160px; border: 2px dashed #4e3629; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #ffffff; overflow: hidden; position: relative; margin-bottom: 10px;">
+                                <img id="qris-preview-img" src="" alt="Bukti Transfer" class="hidden" style="width: 100%; height: 100%; object-fit: contain;">
+                                <div id="qris-preview-placeholder" style="color: #8c7365; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                                    <i class="fa-solid fa-file-image" style="font-size: 32px; color: #4e3629;"></i>
+                                    <span style="font-size: 13px;">Belum ada foto bukti transfer</span>
+                                </div>
+                            </div>
+                            <!-- Buttons -->
+                            <div style="display: flex; gap: 8px; justify-content: center;">
+                                <button type="button" class="btn-primary" id="btn-take-qris-photo" style="font-size: 12px; padding: 8px 14px; display: flex; align-items: center; gap: 6px; border-radius: 6px; border: none; cursor: pointer;">
+                                    <i class="fa-solid fa-camera"></i> Ambil Foto
+                                </button>
+                                <button type="button" class="btn-secondary" id="btn-upload-qris-file-trigger" style="font-size: 12px; padding: 8px 14px; display: flex; align-items: center; gap: 6px; border-radius: 6px; cursor: pointer;">
+                                    <i class="fa-solid fa-upload"></i> Upload File
+                                </button>
+                                <input type="file" id="qris-file-input" accept="image/*" class="hidden">
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Insufficient Cash Notification (Popup Warning Inline) -->
                     <div class="alert alert-danger hidden" id="insufficient-funds-alert">
                         <i class="fa-solid fa-triangle-exclamation"></i> Uang pembayaran tidak mencukupi tagihan!
@@ -384,6 +409,16 @@
                         <span id="detail-tx-grand-total">Rp0</span>
                     </div>
                 </div>
+
+                <!-- QRIS Bukti Transfer View -->
+                <div id="detail-tx-qris-proof-section" class="hidden" style="margin-top: 15px; padding: 12px; border: 1px solid #e1dcd6; border-radius: 8px; background: #faf8f5;">
+                    <label style="font-weight: 600; color: #4a3321; display: block; margin-bottom: 8px;">Bukti Transfer QRIS</label>
+                    <div style="text-align: center;">
+                        <a id="detail-tx-qris-link" href="#" target="_blank" title="Klik untuk memperbesar gambar">
+                            <img id="detail-tx-qris-img" src="" alt="Bukti Transfer QRIS" style="max-width: 100%; max-height: 250px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e1dcd6;">
+                        </a>
+                    </div>
+                </div>
             </div>
 
             <div class="modal-footer">
@@ -411,7 +446,7 @@
     </div>
 
     <!-- Modal Kamera Absensi -->
-    <div id="camera-modal" class="modal-overlay">
+    <div id="camera-modal" class="modal-overlay" style="z-index: 300;">
         <div class="modal-content sub-modal-content" style="max-width: 400px; text-align: center; padding: 24px;">
             <div class="modal-header" style="justify-content: center; position: relative;">
                 <h3 id="camera-modal-title" style="margin: 0; color: #4a3321; display: flex; align-items: center; gap: 8px; font-weight: 600;">

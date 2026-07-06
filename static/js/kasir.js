@@ -23,6 +23,7 @@ let cart           = [];
 let activeCategory = 'all';
 let searchQuery    = '';
 let salesChart     = null;
+let qrisFotoBase64 = null;
 let currentAttendance = {
     status: 'Belum Absen',   // Belum Absen | Aktif Bekerja | Selesai Shift
     clockIn: '', clockOut: '', activeDate: '', id_absensi: null
@@ -385,6 +386,17 @@ function initPaymentInteractions() {
         cashInput.value = '';
         document.getElementById('payment-change').innerText = 'Rp0';
         document.getElementById('insufficient-funds-alert').classList.add('hidden');
+        
+        // Reset QRIS state
+        qrisFotoBase64 = null;
+        document.getElementById('qris-proof-section').classList.add('hidden');
+        const qrisPreviewImg = document.getElementById('qris-preview-img');
+        if (qrisPreviewImg) {
+            qrisPreviewImg.src = '';
+            qrisPreviewImg.classList.add('hidden');
+        }
+        document.getElementById('qris-preview-placeholder')?.classList.remove('hidden');
+
         document.querySelector('input[name="payment_method"][value="Cash"]').checked = true;
         methodCards.forEach(c => c.classList.remove('active'));
         document.querySelector('.method-card[data-method="Cash"]').classList.add('active');
@@ -412,11 +424,70 @@ function initPaymentInteractions() {
             card.classList.add('active');
             card.querySelector('input[type="radio"]').checked = true;
             const isNonCash = card.querySelector('input').value !== 'Cash';
+            const isQRIS = card.querySelector('input').value === 'QRIS';
+            
             document.getElementById('cash-calculator-section').classList.toggle('hidden', isNonCash);
             document.getElementById('change-display-box').classList.toggle('hidden', isNonCash);
+            document.getElementById('qris-proof-section').classList.toggle('hidden', !isQRIS);
             document.getElementById('insufficient-funds-alert').classList.add('hidden');
+            
             if (!isNonCash)
                 hitungKembalian(parseInt(document.getElementById('payment-grand-total').getAttribute('data-amount')));
+        });
+    });
+
+    // QRIS Upload / Ambil Foto Interactions
+    const btnTakeQrisPhoto = document.getElementById('btn-take-qris-photo');
+    const btnUploadQrisTrigger = document.getElementById('btn-upload-qris-file-trigger');
+    const qrisFileInput = document.getElementById('qris-file-input');
+
+    btnUploadQrisTrigger?.addEventListener('click', () => {
+        qrisFileInput?.click();
+    });
+
+    qrisFileInput?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                qrisFotoBase64 = event.target.result;
+                const previewImg = document.getElementById('qris-preview-img');
+                const previewPlaceholder = document.getElementById('qris-preview-placeholder');
+                if (previewImg && previewPlaceholder) {
+                    previewImg.src = qrisFotoBase64;
+                    previewImg.classList.remove('hidden');
+                    previewPlaceholder.classList.add('hidden');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    btnTakeQrisPhoto?.addEventListener('click', async () => {
+        bukaModal('camera-modal');
+        const titleEl = document.getElementById('camera-modal-title');
+        if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-camera"></i> Ambil Foto Bukti Transfer';
+        
+        await mulaiKamera();
+        
+        const btnCapture = document.getElementById('btn-capture-absensi');
+        const newBtn = btnCapture.cloneNode(true);
+        btnCapture.parentNode.replaceChild(newBtn, btnCapture);
+        
+        newBtn.addEventListener('click', () => {
+            const foto = ambilFotoKamera();
+            if (!foto) { tampilkanToast('Gagal mengambil foto', 'danger'); return; }
+            hentikanKamera();
+            tutupModal('camera-modal');
+            
+            qrisFotoBase64 = foto;
+            const previewImg = document.getElementById('qris-preview-img');
+            const previewPlaceholder = document.getElementById('qris-preview-placeholder');
+            if (previewImg && previewPlaceholder) {
+                previewImg.src = foto;
+                previewImg.classList.remove('hidden');
+                previewPlaceholder.classList.add('hidden');
+            }
         });
     });
 
@@ -466,6 +537,10 @@ async function prosesCheckoutAktif() {
             subtotal  : i.price * i.qty
         }))
     };
+
+    if (method === 'QRIS' && qrisFotoBase64) {
+        payload.foto_bukti_tf = qrisFotoBase64;
+    }
 
     const btnProcess = document.getElementById('btn-process-payment');
     btnProcess.setAttribute('disabled','true');
@@ -724,6 +799,17 @@ window.bukaDetailTransaksi = window.openTransactionDetails = async function (txI
                 <td style="text-align:right"><strong>${formatRupiah(Number(item.subtotal))}</strong></td>`;
             tbody.appendChild(tr);
         });
+
+        const qrisProofSection = document.getElementById('detail-tx-qris-proof-section');
+        if (qrisProofSection) {
+            if (tx.metode_pembayaran === 'QRIS' && tx.bukti_tf) {
+                document.getElementById('detail-tx-qris-img').src = tx.bukti_tf;
+                document.getElementById('detail-tx-qris-link').href = tx.bukti_tf;
+                qrisProofSection.classList.remove('hidden');
+            } else {
+                qrisProofSection.classList.add('hidden');
+            }
+        }
 
         bukaModal('tx-detail-modal');
 

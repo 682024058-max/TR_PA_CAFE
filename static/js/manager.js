@@ -1017,6 +1017,18 @@ window.viewTransactionDetail = async function(id) {
                 tbody.appendChild(tr);
             });
         }
+
+        const qrisProofSection = document.getElementById('tx-detail-qris-proof-section');
+        if (qrisProofSection) {
+            if (tx.metode_pembayaran === 'QRIS' && tx.bukti_tf) {
+                document.getElementById('tx-detail-qris-img').src = tx.bukti_tf;
+                document.getElementById('tx-detail-qris-link').href = tx.bukti_tf;
+                qrisProofSection.classList.remove('hidden');
+            } else {
+                qrisProofSection.classList.add('hidden');
+            }
+        }
+
         bukaModal("tx-detail-modal");
     } catch(e) {
         tampilkanToast("Gagal load detail transaksi: " + e.message, "danger");

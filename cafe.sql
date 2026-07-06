@@ -42,6 +42,7 @@ CREATE TABLE transaksi (
     uang_bayar INT NOT NULL,
     kembalian INT NOT NULL,
     status_transaksi ENUM('selesai', 'batal') DEFAULT 'selesai',
+    bukti_tf LONGTEXT DEFAULT NULL,
     FOREIGN KEY (id_user) REFERENCES users(id_user)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

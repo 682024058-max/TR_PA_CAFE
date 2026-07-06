@@ -518,6 +518,17 @@ def create_transaksi():
     if not data or not data.get('items'):
         return jsonify({"status":"error","message":"Data transaksi dan items wajib ada!"}), 400
 
+    metode_pembayaran = data.get('metode_pembayaran', 'Cash')
+    bukti_tf_url = None
+    if metode_pembayaran == 'QRIS':
+        foto_bukti_tf = data.get('foto_bukti_tf')
+        if foto_bukti_tf:
+            try:
+                res = cloudinary.uploader.upload(foto_bukti_tf, folder="qris_bukti")
+                bukti_tf_url = res.get("secure_url")
+            except Exception as e:
+                print("Gagal upload foto bukti transfer QRIS ke Cloudinary:", e)
+
     conn = None
     try:
         conn = get_db()
@@ -525,14 +536,15 @@ def create_transaksi():
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO transaksi "
-                "(id_user, tanggal_transaksi, total_harga, metode_pembayaran, uang_bayar, kembalian) "
-                "VALUES (%s, NOW(), %s, %s, %s, %s)",
+                "(id_user, tanggal_transaksi, total_harga, metode_pembayaran, uang_bayar, kembalian, bukti_tf) "
+                "VALUES (%s, NOW(), %s, %s, %s, %s, %s)",
                 (
                     data['id_user'],
                     data['total_harga'],
-                    data.get('metode_pembayaran', 'Cash'),
+                    metode_pembayaran,
                     data.get('uang_bayar', 0),
-                    data.get('kembalian', 0)
+                    data.get('kembalian', 0),
+                    bukti_tf_url
                 )
             )
             id_transaksi = cur.lastrowid
@@ -1147,6 +1159,22 @@ def init_payroll_table():
     finally:
         if conn: conn.close()
 
+def init_transaksi_table_migration():
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("SHOW COLUMNS FROM transaksi LIKE 'bukti_tf'")
+            if not cur.fetchone():
+                cur.execute("ALTER TABLE transaksi ADD COLUMN bukti_tf LONGTEXT DEFAULT NULL")
+                print("Kolom bukti_tf berhasil ditambahkan ke tabel transaksi.")
+            else:
+                print("Kolom bukti_tf sudah ada di tabel transaksi.")
+    except Exception as e:
+        print("Gagal melakukan migrasi tabel transaksi:", e)
+    finally:
+        if conn: conn.close()
+
 @app.route('/api/payroll/calculate-shifts', methods=['GET'])
 @role_required('manager')
 def calculate_shifts():
@@ -1392,6 +1420,7 @@ def route_manager():
 if __name__ == '__main__':
     import os
     init_payroll_table()
+    init_transaksi_table_migration()
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
         scheduler_thread = threading.Thread(target=run_auto_report_scheduler, daemon=True)
         scheduler_thread.start()
