@@ -402,19 +402,23 @@ function initPaymentInteractions() {
         bukaModal('camera-modal');
         const titleEl = document.getElementById('camera-modal-title');
         if (titleEl) titleEl.innerHTML = '<i class="fa-solid fa-camera"></i> Ambil Foto Bukti Transfer';
-        
+
+        currentFacingMode = 'environment';
+        const flipBtn = document.getElementById('btn-flip-camera');
+        if (flipBtn) flipBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Kamera Depan';
+
         await mulaiKamera();
-        
+
         const btnCapture = document.getElementById('btn-capture-absensi');
         const newBtn = btnCapture.cloneNode(true);
         btnCapture.parentNode.replaceChild(newBtn, btnCapture);
-        
+
         newBtn.addEventListener('click', () => {
             const foto = ambilFotoKamera();
             if (!foto) { tampilkanToast('Gagal mengambil foto', 'danger'); return; }
             hentikanKamera();
             tutupModal('camera-modal');
-            
+
             qrisFotoBase64 = foto;
             const previewImg = document.getElementById('qris-preview-img');
             const previewPlaceholder = document.getElementById('qris-preview-placeholder');
@@ -803,20 +807,23 @@ async function loadRiwayatAbsensi() {
 }
 
 let webcamStream = null;
+let currentFacingMode = 'environment';
 
 async function mulaiKamera() {
     const video = document.getElementById('webcam-video');
     const loading = document.getElementById('camera-loading-placeholder');
     const errorEl = document.getElementById('camera-error-placeholder');
-    
+
     if (!video) return;
-    
+
     if (loading) loading.style.display = 'flex';
     if (errorEl) errorEl.style.display = 'none';
-    
+
+    video.style.transform = currentFacingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+
     try {
         webcamStream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480, facingMode: 'user' },
+            video: { width: 640, height: 480, facingMode: currentFacingMode },
             audio: false
         });
         video.srcObject = webcamStream;
@@ -836,6 +843,17 @@ function hentikanKamera() {
     const video = document.getElementById('webcam-video');
     if (video) video.srcObject = null;
 }
+
+async function flipKamera() {
+    hentikanKamera();
+    currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+    const btn = document.getElementById('btn-flip-camera');
+    if (btn) btn.innerHTML = currentFacingMode === 'user'
+        ? '<i class="fa-solid fa-rotate"></i> Kamera Belakang'
+        : '<i class="fa-solid fa-rotate"></i> Kamera Depan';
+    await mulaiKamera();
+}
+window.flipKamera = flipKamera;
 
 function ambilFotoKamera() {
     const video = document.getElementById('webcam-video');

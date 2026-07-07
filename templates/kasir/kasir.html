@@ -452,7 +452,7 @@
             
             <div class="card-body" style="padding: 16px 0;">
                 <div class="camera-stream-container" style="position: relative; width: 100%; max-width: 280px; aspect-ratio: 4/3; margin: 0 auto; background: #1a1a1a; border-radius: 8px; overflow: hidden; border: 2px solid #e1dcd6; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);">
-                    <video id="webcam-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);"></video>
+                    <video id="webcam-video" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
                     <canvas id="webcam-canvas" style="display: none;"></canvas>
                     <div id="camera-loading-placeholder" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #e1dcd6; background: rgba(74,51,33,0.85); flex-direction: column; font-size: 13px;">
                         <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 8px; color: #c68a4c;"></i>
@@ -467,6 +467,9 @@
             
             <div class="modal-footer" style="justify-content: center; gap: 12px; border: none; padding-top: 8px;">
                 <button class="btn-secondary" onclick="closeCameraModal()">Batal</button>
+                <button class="btn-secondary" id="btn-flip-camera" onclick="flipKamera()" style="padding: 10px 16px; background: #3d2519; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-rotate"></i> Kamera Depan
+                </button>
                 <button class="btn-primary" id="btn-capture-absensi" style="padding: 10px 20px;">
                     <i class="fa-solid fa-check-circle"></i> Ambil Gambar
                 </button>

@@ -1037,11 +1037,12 @@ def get_manager_email():
     return "kepineliano@gmail.com" # default fallback
 
 last_sent_date = None
+last_sent_month = None
 
 def run_auto_report_scheduler():
-    global last_sent_date
+    global last_sent_date, last_sent_month
     print("=" * 60)
-    print(f"  BACKGROUND SCHEDULER: Aktif (waktu kirim harian: {AUTO_REPORT_TIME})")
+    print(f"  BACKGROUND SCHEDULER: Aktif (waktu kirim harian: {AUTO_REPORT_TIME}, bulanan: tgl 1 jam 01:00)")
     print("=" * 60)
     
     while True:
@@ -1049,6 +1050,7 @@ def run_auto_report_scheduler():
             now = datetime.now()
             current_time_str = now.strftime("%H:%M")
             current_date_str = now.strftime("%Y-%m-%d")
+            current_month_str = now.strftime("%Y-%m")
             
             if current_time_str == AUTO_REPORT_TIME and last_sent_date != current_date_str:
                 # Jika berjalan jam 00:00 (tengah malam), target laporan adalah penjualan kemarin (1 hari sebelum hari ini)
@@ -1066,11 +1068,39 @@ def run_auto_report_scheduler():
                     success = send_email_via_resend(recipient, subject, html_content)
                     if success:
                         last_sent_date = current_date_str
-                        print(f"Laporan otomatis tanggal {report_date} sukses dikirim ke {recipient}.")
+                        print(f"Laporan harian otomatis tanggal {report_date} sukses dikirim ke {recipient}.")
                     else:
-                        print(f"Laporan otomatis tanggal {report_date} gagal dikirim. Dicoba lagi nanti.")
+                        print(f"Laporan harian otomatis tanggal {report_date} gagal dikirim. Dicoba lagi nanti.")
                 else:
-                    print("Laporan kosong atau DB tidak terbaca. Menunda percobaan.")
+                    print("Laporan harian kosong atau DB tidak terbaca. Menunda percobaan.")
+            
+            if current_time_str == "01:00" and now.day == 1 and last_sent_month != current_month_str:
+                prev_month_last_day = (now.replace(day=1) - timedelta(days=1))
+                prev_year  = prev_month_last_day.strftime("%Y")
+                prev_month = prev_month_last_day.strftime("%m")
+                import calendar
+                last_day = calendar.monthrange(int(prev_year), int(prev_month))[1]
+                start_date = f"{prev_year}-{prev_month}-01"
+                end_date   = f"{prev_year}-{prev_month}-{last_day:02d}"
+                bulan_names = ["Januari","Februari","Maret","April","Mei","Juni",
+                               "Juli","Agustus","September","Oktober","November","Desember"]
+                bulan_label = f"{bulan_names[int(prev_month)-1]} {prev_year}"
+
+                print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Pemicu scheduler bulanan aktif untuk periode {bulan_label}...")
+                recipient = get_manager_email()
+                subject = f"Laporan Penjualan Bulanan — {bulan_label}"
+                html_content = build_sales_report_html(start_date, end_date)
+
+                if html_content:
+                    success = send_email_via_resend(recipient, subject, html_content)
+                    if success:
+                        last_sent_month = current_month_str
+                        print(f"Laporan bulanan otomatis periode {bulan_label} sukses dikirim ke {recipient}.")
+                    else:
+                        print(f"Laporan bulanan otomatis periode {bulan_label} gagal dikirim. Dicoba lagi nanti.")
+                else:
+                    print("Laporan bulanan kosong atau DB tidak terbaca. Menunda percobaan.")
+            
             time.sleep(30)
         except Exception as e:
             print("Error di thread background scheduler:", e)
@@ -1449,7 +1479,6 @@ def route_kasir():
 def route_manager():
     return render_template('manager/manager.html')
 
-# ============================================================
 if __name__ == '__main__':
     import os
     init_payroll_table()
