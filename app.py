@@ -18,6 +18,7 @@ CORS(app)
 import os
 import urllib.parse
 
+# Load .env file manually if exists (avoiding python-dotenv dependency)
 base_dir = os.path.dirname(os.path.abspath(__file__))
 env_path = os.path.join(base_dir, ".env")
 if os.path.exists(env_path):
@@ -32,6 +33,7 @@ if os.path.exists(env_path):
     except Exception as e:
         print("Gagal membaca file .env secara manual:", e)
 
+# ── Konfigurasi Cloudinary ────────────────────────────────────
 import cloudinary
 import cloudinary.uploader
 cloudinary.config(
@@ -41,9 +43,11 @@ cloudinary.config(
     secure=True
 )
 
+# Parse DATABASE_URL if present, otherwise read individual variables
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL:
     try:
+        # Standardize prefix for urlparse (mysql+pymysql:// -> mysql://)
         url_str = DATABASE_URL
         if url_str.startswith("mysql+pymysql://"):
             url_str = url_str.replace("mysql+pymysql://", "mysql://", 1)
@@ -51,7 +55,7 @@ if DATABASE_URL:
         DB_HOST     = parsed.hostname or "localhost"
         DB_USER     = parsed.username or "root"
         DB_PASSWORD = parsed.password or ""
-        DB_PORT     = parsed.port or 4000
+        DB_PORT     = parsed.port or 4000  # Default TiDB port is 4000
         DB_NAME     = parsed.path.lstrip('/') or "Sibei"
     except Exception as e:
         print("Gagal mem-parsing DATABASE_URL, menggunakan fallback default:", e)
@@ -67,10 +71,12 @@ else:
     DB_NAME     = os.environ.get("DB_NAME", "Sibei")
     DB_PORT     = int(os.environ.get("DB_PORT", 3306))
 
+# ── Konfigurasi Resend API & Laporan Otomatis ────────────────
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "re_KaTaQNWQ_EJvAZLzSKgJE3nyiEUZHJ2Nx")
 RESEND_SENDER  = os.environ.get("RESEND_SENDER", "Kopi Sibei <onboarding@resend.dev>")
-AUTO_REPORT_TIME = "00:00"
+AUTO_REPORT_TIME = "00:00"  # Format HH:MM (24 jam)
 
+# ── Koneksi ──────────────────────────────────────────────────
 def get_db():
     ssl_config = None
     if "localhost" not in DB_HOST:
@@ -92,6 +98,7 @@ def serialize(obj):
 def rows_to_json(rows):
     return [{k: serialize(v) for k, v in row.items()} for row in rows]
 
+# ── Role guard ───────────────────────────────────────────────
 def role_required(*roles):
     def decorator(f):
         @wraps(f)
@@ -104,6 +111,9 @@ def role_required(*roles):
         return wrapper
     return decorator
 
+# ============================================================
+#  STATUS
+# ============================================================
 @app.route('/api/status', methods=['GET'])
 def check_status():
     try:
@@ -112,6 +122,10 @@ def check_status():
     except Exception as e:
         return jsonify({"status":"warning","message":str(e),"database_connected":False}), 200
 
+# ============================================================
+#  LOGIN
+# Kolom users: id_user, nama, username, password, email, role, status
+# ============================================================
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -135,8 +149,10 @@ def login():
         if not user:
             return jsonify({"status":"error","message":"Username atau Password salah."}), 401
             
+        # Verify password using security helper
         is_correct, needs_upgrade = verify_password(user['password'], password)
         if is_correct and needs_upgrade:
+            # Automatically upgrade/migrate plaintext password in the DB to hashed version
             try:
                 hashed_pw = hash_password(password)
                 with conn.cursor() as upgrade_cur:
@@ -162,6 +178,9 @@ def login():
     finally:
         if conn: conn.close()
 
+# ============================================================
+#  USERS  (hanya manager)
+# ============================================================
 @app.route('/api/users', methods=['GET'])
 @role_required('manager')
 def get_users():
@@ -190,10 +209,12 @@ def add_user():
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # Check username uniqueness
             cur.execute("SELECT id_user FROM users WHERE username=%s", (data['username'],))
             if cur.fetchone():
                 return jsonify({"status":"error","message":"Username sudah digunakan oleh pengguna lain."}), 409
 
+            # Check email uniqueness
             cur.execute("SELECT id_user FROM users WHERE email=%s", (data['email'],))
             if cur.fetchone():
                 return jsonify({"status":"error","message":"Email sudah digunakan oleh pengguna lain."}), 409
@@ -219,11 +240,13 @@ def update_user(id_user):
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # Check username uniqueness if provided and changed
             if 'username' in data and data['username']:
                 cur.execute("SELECT id_user FROM users WHERE username=%s AND id_user!=%s", (data['username'], id_user))
                 if cur.fetchone():
                     return jsonify({"status":"error","message":"Username sudah digunakan oleh pengguna lain."}), 409
 
+            # Check email uniqueness if provided and changed
             if 'email' in data and data['email']:
                 cur.execute("SELECT id_user FROM users WHERE email=%s AND id_user!=%s", (data['email'], id_user))
                 if cur.fetchone():
@@ -251,8 +274,20 @@ def update_user(id_user):
 @app.route('/api/users/<int:id_user>', methods=['DELETE'])
 @role_required('manager')
 def delete_user(id_user):
-    return jsonify({"status":"error","message":"Menghapus akun kasir tidak diperbolehkan. Silakan nonaktifkan akun sebagai gantinya."}), 403
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM users WHERE id_user=%s", (id_user,))
+        return jsonify({"status":"success","message":"User berhasil dihapus."}), 200
+    except Exception as e:
+        return jsonify({"status":"error","message":str(e)}), 500
+    finally:
+        if conn: conn.close()
 
+# ============================================================
+#  KATEGORI  — Dinamis dari tabel kategori di database
+# ============================================================
 @app.route('/api/kategori', methods=['GET'])
 def get_kategori():
     conn = None
@@ -291,6 +326,7 @@ def add_category():
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # Cek duplikat
             cur.execute("SELECT id_kategori FROM kategori WHERE LOWER(nama_kategori)=LOWER(%s)", (nama_kategori,))
             if cur.fetchone():
                 return jsonify({"status":"error","message":"Kategori dengan nama tersebut sudah ada."}), 409
@@ -302,6 +338,12 @@ def add_category():
     finally:
         if conn: conn.close()
 
+
+# ============================================================
+#  PRODUCTS
+# Kolom nyata: id_products, nama_produk, kategori(enum),
+#              harga, icon, warna, dibuat_, update_
+# ============================================================
 @app.route('/api/products', methods=['GET'])
 def get_products():
     conn = None
@@ -424,6 +466,7 @@ def delete_product(id_product):
         return jsonify({"status":"error","message":str(e)}), 500
     finally:
         if conn: conn.close()
+
 
 @app.route('/api/transaksi', methods=['GET'])
 @role_required('kasir','manager')
@@ -558,6 +601,9 @@ def delete_transaksi(id_transaksi):
     finally:
         if conn: conn.close()
 
+# ============================================================
+#  LAPORAN (manager)
+# ============================================================
 @app.route('/api/laporan/harian', methods=['GET'])
 @role_required('manager')
 def laporan_harian():
@@ -581,6 +627,12 @@ def laporan_harian():
     finally:
         if conn: conn.close()
 
+# ============================================================
+#  ABSENSI
+# Kolom nyata: id_absensi, date(date), nama_kasir(varchar),
+#              jam_masuk(time), jam_keluar(time),
+#              total_jam(decimal), status(varchar), waktu_dibuat
+# ============================================================
 @app.route('/api/absensi', methods=['GET'])
 @role_required('kasir','manager')
 def get_absensi():
@@ -724,6 +776,7 @@ def delete_absensi(id_absensi):
     finally:
         if conn: conn.close()
 
+# ── Fungsi Pendukung Laporan Penjualan (HTML & Resend API) ────
 def format_idr_py(val):
     return f"Rp {val:,.0f}".replace(",", ".")
 
@@ -928,7 +981,9 @@ def send_email_via_resend(recipient, subject, html_content, attachments=None):
         print("Resend API Key belum diisi. Pengiriman email dilewati (Mode Simulasi).")
         return False
         
+    # Auto-fallback jika menggunakan domain onboarding gratis Resend
     if "onboarding@resend.dev" in RESEND_SENDER:
+        # Resend membatasi penerima hanya ke email pendaftar API Key (kepineliano@gmail.com)
         recipient = "kepineliano@gmail.com"
         
     url = "https://api.resend.com/emails"
@@ -979,7 +1034,7 @@ def get_manager_email():
         print("Gagal fetch email manager:", e)
     finally:
         if conn: conn.close()
-    return "kepineliano@gmail.com"
+    return "kepineliano@gmail.com" # default fallback
 
 last_sent_date = None
 
@@ -996,6 +1051,7 @@ def run_auto_report_scheduler():
             current_date_str = now.strftime("%Y-%m-%d")
             
             if current_time_str == AUTO_REPORT_TIME and last_sent_date != current_date_str:
+                # Jika berjalan jam 00:00 (tengah malam), target laporan adalah penjualan kemarin (1 hari sebelum hari ini)
                 if AUTO_REPORT_TIME == "00:00":
                     report_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
                 else:
@@ -1065,6 +1121,7 @@ def manual_email_report():
 
 @app.route('/api/cron/daily-report', methods=['GET', 'POST'])
 def cron_daily_report():
+    # Mengamankan endpoint agar hanya bisa dipanggil oleh server Vercel Cron
     auth_header = request.headers.get("Authorization")
     cron_secret = os.environ.get("CRON_SECRET")
     
@@ -1079,6 +1136,7 @@ def cron_daily_report():
     if os.environ.get("VERCEL") == "1" and not is_vercel_cron:
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
+    # Ambil tanggal kemarin untuk dilaporkan
     yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     recipient = get_manager_email()
     subject = f"☕ [AUTO] Laporan Penjualan Harian - {yesterday}"
@@ -1091,6 +1149,9 @@ def cron_daily_report():
         
     return jsonify({"status": "error", "message": "Gagal mengirim laporan otomatis."}), 500
 
+# ============================================================
+#  PENGGAJIAN (PAYROLL CRUD)
+# ============================================================
 def init_payroll_table():
     conn = None
     try:
@@ -1151,7 +1212,7 @@ def init_transaksi_table_migration():
 @role_required('manager')
 def calculate_shifts():
     cashier_name = request.args.get('cashier', '').strip()
-    period = request.args.get('period', '').strip()
+    period = request.args.get('period', '').strip() # format 'YYYY-MM'
     
     if not cashier_name or not period:
         return jsonify({"status":"error","message":"Parameters 'cashier' and 'period' are required."}), 400
@@ -1160,6 +1221,7 @@ def calculate_shifts():
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # Hitung jumlah kehadiran di absensi pada periode tersebut
             cur.execute(
                 "SELECT COUNT(*) AS total_shifts FROM absensi "
                 "WHERE nama_kasir=%s AND DATE_FORMAT(date, '%%Y-%%m')=%s AND status='Hadir'",
@@ -1180,17 +1242,21 @@ def get_payroll():
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # 1. Ambil semua kasir yang aktif
             cur.execute("SELECT id_user, nama FROM users WHERE role='kasir'")
             cashiers = cur.fetchall()
             
+            # 2. Ambil semua periode unik (bulan-tahun) dari tabel absensi
             cur.execute("SELECT DISTINCT DATE_FORMAT(date, '%Y-%m') AS period FROM absensi WHERE date IS NOT NULL")
             periods = [row['period'] for row in cur.fetchall() if row['period']]
             
+            # Jika tabel absensi masih kosong, tambahkan periode bulan ini sebagai default
             if not periods:
                 periods = [datetime.now().strftime('%Y-%m')]
                 
             for period in periods:
                 for cashier in cashiers:
+                    # Hitung total kehadiran shift kasir tersebut pada periode ini
                     cur.execute(
                         "SELECT COUNT(*) AS total_shifts FROM absensi "
                         "WHERE nama_kasir=%s AND DATE_FORMAT(date, '%%Y-%%m')=%s AND status='Hadir'",
@@ -1199,7 +1265,9 @@ def get_payroll():
                     res = cur.fetchone()
                     total_shifts = res['total_shifts'] if res else 0
                     
+                    # Kita hanya buat data gaji otomatis jika kasir tersebut memiliki minimal 1 kehadiran/shift
                     if total_shifts > 0:
+                        # Cek apakah sudah ada di tabel penggajian
                         cur.execute(
                             "SELECT id_penggajian, rate_per_shift FROM penggajian "
                             "WHERE id_kasir=%s AND periode=%s",
@@ -1208,6 +1276,7 @@ def get_payroll():
                         exist = cur.fetchone()
                         
                         if not exist:
+                            # Belum ada -> Insert data gaji baru (default rate Rp 75.000)
                             default_rate = 75000
                             total_salary = default_rate * total_shifts
                             cur.execute(
@@ -1216,6 +1285,7 @@ def get_payroll():
                                 (cashier['id_user'], period, default_rate, total_shifts, total_salary)
                             )
                         else:
+                            # Sudah ada -> Update total_shift & total_gaji berdasarkan absensi terbaru
                             rate = exist['rate_per_shift']
                             total_salary = rate * total_shifts
                             cur.execute(
@@ -1224,6 +1294,7 @@ def get_payroll():
                                 (total_shifts, total_salary, exist['id_penggajian'])
                             )
             
+            # 3. Ambil data penggajian final untuk dikirim ke frontend
             cur.execute(
                 "SELECT p.id_penggajian AS id, u.nama AS cashier, p.periode AS period, "
                 "p.rate_per_shift AS ratePerShift, p.total_shift AS totalShifts, "
@@ -1255,11 +1326,13 @@ def add_payroll():
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # Cari id_user untuk kasir
             cur.execute("SELECT id_user FROM users WHERE nama=%s LIMIT 1", (cashier_name,))
             user = cur.fetchone()
             if not user:
                 return jsonify({"status":"error","message":f"Kasir dengan nama '{cashier_name}' tidak ditemukan."}), 404
             
+            # Cek apakah sudah pernah diinput untuk kasir dan periode yang sama
             cur.execute("SELECT id_penggajian FROM penggajian WHERE id_kasir=%s AND periode=%s", (user['id_user'], period))
             if cur.fetchone():
                 return jsonify({"status":"error","message":f"Data gaji untuk {cashier_name} periode {period} sudah ada."}), 409
@@ -1292,6 +1365,7 @@ def update_payroll(id_payroll):
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # Cari id_user untuk kasir
             cur.execute("SELECT id_user FROM users WHERE nama=%s LIMIT 1", (cashier_name,))
             user = cur.fetchone()
             if not user:
@@ -1356,6 +1430,9 @@ def delete_bukti_payroll(id_payroll):
     finally:
         if conn: conn.close()
 
+# ============================================================ 
+#  PAGE ROUTING (rendering templates)
+# ============================================================
 @app.route('/')
 @app.route('/login')
 @app.route('/login.html')
@@ -1372,6 +1449,7 @@ def route_kasir():
 def route_manager():
     return render_template('manager/manager.html')
 
+# ============================================================
 if __name__ == '__main__':
     import os
     init_payroll_table()
