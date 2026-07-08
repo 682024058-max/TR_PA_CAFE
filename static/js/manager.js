@@ -313,6 +313,7 @@ async function muatKategori() {
             'dessert'   : 'fa-cake-candles'
         };
         CATEGORIES = (data.data || []).map(c => ({
+            db_id: c.db_id,
             id   : c.id_kategori,
             name : c.nama_kategori,
             icon : iconMap[c.id_kategori] || 'fa-tag'
@@ -526,27 +527,32 @@ function inisialisasiCRUDKategori() {
 
 async function tanganiKirimKategori(e) {
     if (e) e.preventDefault();
+    const idVal    = document.getElementById("category-form-id")?.value;
     const nameInput = document.getElementById("category-form-name");
     const name = nameInput ? nameInput.value.trim() : "";
     const icon = "fa-tag";
-    
+
     if (!name) {
         tampilkanToast("Nama kategori wajib diisi!", "warning");
         return;
     }
-    
+
     try {
-        const payload = {
-            nama_kategori: name,
-            icon: icon
-        };
-        await ambilDataApi(`${API_BASE}/kategori`, {
-            method: 'POST',
-            body: JSON.stringify(payload)
-        });
-        tampilkanToast("Kategori baru berhasil ditambahkan!", "success");
+        const payload = { nama_kategori: name, icon };
+        if (idVal) {
+            await ambilDataApi(`${API_BASE}/kategori/${idVal}`, {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+            });
+            tampilkanToast("Kategori berhasil diperbarui!", "success");
+        } else {
+            await ambilDataApi(`${API_BASE}/kategori`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            tampilkanToast("Kategori baru berhasil ditambahkan!", "success");
+        }
         tutupModal("category-modal");
-        
         await muatKategori();
         tampilkanTabelKategori();
         isiFilterKategoriMenu();
@@ -555,6 +561,27 @@ async function tanganiKirimKategori(e) {
     }
 }
 window.tanganiKirimKategori = tanganiKirimKategori;
+
+window.editKategori = function(dbId, nama) {
+    document.getElementById("category-form")?.reset();
+    document.getElementById("category-form-id").value = dbId;
+    document.getElementById("category-form-name").value = nama;
+    document.getElementById("category-modal-title").textContent = "Edit Kategori";
+    bukaModal("category-modal");
+};
+
+window.deleteKategori = async function(dbId, nama) {
+    if (!confirm(`Hapus kategori "${nama}"? Kategori yang masih memiliki produk tidak dapat dihapus.`)) return;
+    try {
+        await ambilDataApi(`${API_BASE}/kategori/${dbId}`, { method: 'DELETE' });
+        tampilkanToast(`Kategori "${nama}" berhasil dihapus.`, 'success');
+        await muatKategori();
+        tampilkanTabelKategori();
+        isiFilterKategoriMenu();
+    } catch(e) {
+        tampilkanToast('Gagal menghapus kategori: ' + e.message, 'danger');
+    }
+};
 
 function tampilkanTabelKategori() {
     const tbody = document.getElementById("categories-table-tbody");
@@ -572,6 +599,16 @@ function tampilkanTabelKategori() {
             <td><code>CAT-${String(idx+1).padStart(3,'0')}</code></td>
             <td><strong>${cat.name}</strong></td>
             <td style="text-align:center"><span class="badge badge-success">Aktif</span></td>
+            <td style="text-align:center">
+                <button class="btn-secondary" onclick="editKategori(${cat.db_id}, '${cat.name.replace(/'/g, "\\'")}')"
+                    style="padding:5px 10px;font-size:11px;margin-right:4px">
+                    <i class="fa-solid fa-pencil"></i> Edit
+                </button>
+                <button class="btn-danger" onclick="deleteKategori(${cat.db_id}, '${cat.name.replace(/'/g, "\\'")}')"
+                    style="padding:5px 10px;font-size:11px">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
         `;
         tbody.appendChild(tr);
     });
@@ -619,10 +656,14 @@ function tampilkanTabelKasir() {
     }
     filtered.forEach(c => {
         const tr = document.createElement("tr");
+        const pwDisplay = c.password_plain
+            ? `<span class="pw-reveal" style="font-family:monospace;font-size:12px;background:#f5f2eb;padding:3px 8px;border-radius:4px;border:1px solid #e1dcd6;cursor:default;user-select:all;" title="Password Kasir">${c.password_plain}</span>`
+            : `<span style="color:var(--text-muted);font-size:11px"><i class="fa-solid fa-lock"></i> Terenkripsi</span>`;
         tr.innerHTML = `
             <td><strong>${c.nama}</strong></td>
             <td><code>${c.username}</code></td>
             <td>${c.email || '-'}</td>
+            <td>${pwDisplay}</td>
             <td><span class="badge ${c.status === 'aktif' ? 'badge-success' : 'badge-danger'}">${c.status === 'aktif' ? 'Aktif' : 'Nonaktif'}</span></td>
             <td>
                 <button class="btn-secondary" onclick="toggleCashierStatus(${c.id_user}, '${c.status}')" style="padding:4px 10px;font-size:10px">
@@ -657,11 +698,15 @@ window.editCashier = function(id) {
     document.getElementById("cashier-form-email").value    = c.email || '';
     document.getElementById("cashier-form-status").value   = c.status;
     document.getElementById("cashier-modal-title").textContent = "Edit Akun Kasir";
-    
+
     const pwWrap  = document.getElementById("cashier-password-wrapper");
     const pwInput = document.getElementById("cashier-form-password");
-    if (pwWrap)  pwWrap.style.display = "none";
-    if (pwInput) { pwInput.required = false; pwInput.value = ""; }
+    if (pwWrap)  pwWrap.style.display = "";
+    if (pwInput) {
+        pwInput.required = false;
+        pwInput.value = c.password_plain || "";
+        pwInput.placeholder = c.password_plain ? c.password_plain : "Kosongkan jika tidak ingin mengubah";
+    }
     bukaModal("cashier-modal");
 }
 
@@ -1003,6 +1048,7 @@ function inisialisasiPengendaliPenggajian() {
             if (rateEl) rateEl.value = 75000;
             isiPilihanKasirPenggajian();
             bukaModal("payroll-modal");
+            setTimeout(picuHitungOtomatisShift, 200);
         });
     }
     
@@ -1143,6 +1189,7 @@ window.editPenggajian = function(id) {
     document.getElementById("payroll-total-display").textContent = formatRupiah(p.totalSalary);
     document.getElementById("payroll-modal-title").textContent   = "Edit Data Gaji Kasir";
     bukaModal("payroll-modal");
+    setTimeout(picuHitungOtomatisShift, 200);
 }
 
 window.deletePayroll = async function(id) {
