@@ -188,22 +188,9 @@ def get_users():
     try:
         conn = get_db()
         with conn.cursor() as cur:
-            cur.execute("SELECT id_user,nama,username,email,role,status,password FROM users ORDER BY id_user")
+            cur.execute("SELECT id_user,nama,username,email,role,status FROM users ORDER BY id_user")
             rows = cur.fetchall()
-        result = []
-        for r in rows:
-            pw = r.get('password', '') or ''
-            is_hashed = ':' in pw
-            result.append({
-                'id_user': r['id_user'],
-                'nama': r['nama'],
-                'username': r['username'],
-                'email': r['email'],
-                'role': r['role'],
-                'status': r['status'],
-                'password_plain': None if is_hashed else pw
-            })
-        return jsonify({"status":"success","data":result}), 200
+        return jsonify({"status":"success","data":rows_to_json(rows)}), 200
     except Exception as e:
         return jsonify({"status":"error","message":str(e)}), 500
     finally:
@@ -316,7 +303,6 @@ def get_kategori():
             text = re.sub(r'[^a-z0-9\s-]', '', text)
             slug = re.sub(r'[\s-]+', '-', text)
             data.append({
-                "db_id": r['id_kategori'],
                 "id_kategori": slug,
                 "nama_kategori": r['nama_kategori'],
                 "icon": r['icon']
@@ -335,55 +321,18 @@ def add_category():
     icon = data.get('icon', 'fa-tag').strip()
     if not nama_kategori:
         return jsonify({"status":"error","message":"Nama kategori wajib diisi!"}), 400
-
+    
     conn = None
     try:
         conn = get_db()
         with conn.cursor() as cur:
+            # Cek duplikat
             cur.execute("SELECT id_kategori FROM kategori WHERE LOWER(nama_kategori)=LOWER(%s)", (nama_kategori,))
             if cur.fetchone():
                 return jsonify({"status":"error","message":"Kategori dengan nama tersebut sudah ada."}), 409
+            
             cur.execute("INSERT INTO kategori (nama_kategori, icon) VALUES (%s, %s)", (nama_kategori, icon))
         return jsonify({"status":"success","message":"Kategori baru berhasil ditambahkan."}), 201
-    except Exception as e:
-        return jsonify({"status":"error","message":str(e)}), 500
-    finally:
-        if conn: conn.close()
-
-@app.route('/api/kategori/<int:id_kategori>', methods=['PUT'])
-@role_required('manager')
-def update_category(id_kategori):
-    data = request.get_json() or {}
-    nama_kategori = data.get('nama_kategori', '').strip()
-    if not nama_kategori:
-        return jsonify({"status":"error","message":"Nama kategori wajib diisi!"}), 400
-    conn = None
-    try:
-        conn = get_db()
-        with conn.cursor() as cur:
-            cur.execute("SELECT id_kategori FROM kategori WHERE LOWER(nama_kategori)=LOWER(%s) AND id_kategori!=%s", (nama_kategori, id_kategori))
-            if cur.fetchone():
-                return jsonify({"status":"error","message":"Kategori dengan nama tersebut sudah ada."}), 409
-            cur.execute("UPDATE kategori SET nama_kategori=%s WHERE id_kategori=%s", (nama_kategori, id_kategori))
-        return jsonify({"status":"success","message":"Kategori berhasil diperbarui."}), 200
-    except Exception as e:
-        return jsonify({"status":"error","message":str(e)}), 500
-    finally:
-        if conn: conn.close()
-
-@app.route('/api/kategori/<int:id_kategori>', methods=['DELETE'])
-@role_required('manager')
-def delete_category(id_kategori):
-    conn = None
-    try:
-        conn = get_db()
-        with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) AS cnt FROM products WHERE kategori=(SELECT nama_kategori FROM kategori WHERE id_kategori=%s)", (id_kategori,))
-            res = cur.fetchone()
-            if res and res['cnt'] > 0:
-                return jsonify({"status":"error","message":"Kategori tidak dapat dihapus karena masih memiliki produk terkait."}), 409
-            cur.execute("DELETE FROM kategori WHERE id_kategori=%s", (id_kategori,))
-        return jsonify({"status":"success","message":"Kategori berhasil dihapus."}), 200
     except Exception as e:
         return jsonify({"status":"error","message":str(e)}), 500
     finally:
@@ -1407,7 +1356,7 @@ def add_payroll():
     try:
         conn = get_db()
         with conn.cursor() as cur:
-            # Cari id_user untuk kasir
+
             cur.execute("SELECT id_user FROM users WHERE nama=%s LIMIT 1", (cashier_name,))
             user = cur.fetchone()
             if not user:
