@@ -1,9 +1,6 @@
-"""
-middleware.py — Role guard decorator untuk semua blueprint.
-"""
+
 from flask import request, jsonify
 from functools import wraps
-
 
 def role_required(*roles):
     def decorator(f):

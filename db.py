@@ -1,7 +1,4 @@
-"""
-db.py — Konfigurasi koneksi database dan helper serialisasi.
-Digunakan bersama oleh semua blueprint di routes/.
-"""
+
 import os
 import urllib.parse
 import pymysql
@@ -9,7 +6,6 @@ import pymysql.cursors
 import decimal
 from datetime import date, datetime, timedelta
 
-# ── Baca .env secara manual ───────────────────────────────────
 base_dir = os.path.dirname(os.path.abspath(__file__))
 env_path = os.path.join(base_dir, ".env")
 if os.path.exists(env_path):
@@ -24,7 +20,6 @@ if os.path.exists(env_path):
     except Exception as e:
         print("Gagal membaca file .env secara manual:", e)
 
-# ── Konfigurasi Database ──────────────────────────────────────
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL:
     try:
@@ -51,7 +46,6 @@ else:
     DB_NAME     = os.environ.get("DB_NAME", "Sibei")
     DB_PORT     = int(os.environ.get("DB_PORT", 3306))
 
-
 def get_db():
     ssl_config = None
     if "localhost" not in DB_HOST:
@@ -63,13 +57,11 @@ def get_db():
         init_command="SET time_zone = '+07:00'"
     )
 
-
 def serialize(obj):
     if isinstance(obj, (date, datetime)): return obj.isoformat()
     if isinstance(obj, timedelta):        return str(obj)
     if isinstance(obj, decimal.Decimal):  return float(obj)
     return obj
-
 
 def rows_to_json(rows):
     return [{k: serialize(v) for k, v in row.items()} for row in rows]
