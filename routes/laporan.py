@@ -8,8 +8,9 @@ import urllib.request
 
 laporan_bp = Blueprint('laporan', __name__)
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "re_KaTaQNWQ_EJvAZLzSKgJE3nyiEUZHJ2Nx")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 RESEND_SENDER  = os.environ.get("RESEND_SENDER", "Kopi Sibei <onboarding@resend.dev>")
+
 
 
 def format_idr_py(val):
