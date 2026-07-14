@@ -1,8 +1,4 @@
-"""
-app.py — Entry point utama aplikasi POS Kopi Sibei.
-Hanya berisi inisialisasi Flask, konfigurasi Cloudinary,
-pendaftaran Blueprint, migrasi DB, dan scheduler laporan otomatis.
-"""
+
 from flask import Flask, render_template
 from flask_cors import CORS
 import os
@@ -14,11 +10,9 @@ from datetime import datetime, timedelta
 import cloudinary
 import cloudinary.uploader
 
-# ── Inisialisasi app ─────────────────────────────────────────
 app = Flask(__name__)
 CORS(app)
 
-# ── Konfigurasi Cloudinary ───────────────────────────────────
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
     api_key=os.environ.get("CLOUDINARY_API_KEY"),
@@ -26,10 +20,8 @@ cloudinary.config(
     secure=True
 )
 
-# ── Konfigurasi Laporan Otomatis ─────────────────────────────
 AUTO_REPORT_TIME = "00:00"
 
-# ── Daftarkan Blueprint ──────────────────────────────────────
 from routes.auth      import auth_bp
 from routes.users     import users_bp
 from routes.menu      import menu_bp
@@ -46,7 +38,6 @@ app.register_blueprint(absensi_bp)
 app.register_blueprint(laporan_bp)
 app.register_blueprint(payroll_bp)
 
-# ── Routing Halaman HTML ─────────────────────────────────────
 @app.route('/')
 @app.route('/login')
 @app.route('/login.html')
@@ -63,7 +54,6 @@ def route_kasir():
 def route_manager():
     return render_template('manager/manager.html')
 
-# ── Migrasi & Inisialisasi Tabel ────────────────────────────
 def init_payroll_table():
     from db import get_db
     conn = None
@@ -106,7 +96,33 @@ def init_transaksi_table_migration():
     finally:
         if conn: conn.close()
 
-# ── Background Scheduler Laporan Otomatis ────────────────────
+def init_absensi_migration():
+    from db import get_db
+    conn = None
+    try:
+        conn = get_db()
+        with conn.cursor() as cur:
+            cur.execute("SHOW COLUMNS FROM absensi LIKE 'id_user'")
+            if not cur.fetchone():
+                cur.execute("ALTER TABLE absensi ADD COLUMN id_user INT DEFAULT NULL")
+                try:
+                    cur.execute("ALTER TABLE absensi ADD CONSTRAINT fk_absensi_user FOREIGN KEY (id_user) REFERENCES users(id_user) ON DELETE SET NULL")
+                except Exception:
+                    pass
+                cur.execute("""
+                    UPDATE absensi a
+                    JOIN users u ON u.nama = a.nama_kasir AND u.role = 'kasir'
+                    SET a.id_user = u.id_user
+                    WHERE a.id_user IS NULL
+                """)
+                print("Kolom id_user berhasil ditambahkan ke tabel absensi dan data lama di-backfill.")
+            else:
+                print("Kolom id_user sudah ada di tabel absensi.")
+    except Exception as e:
+        print("Gagal melakukan migrasi tabel absensi:", e)
+    finally:
+        if conn: conn.close()
+
 last_sent_date  = None
 last_sent_month = None
 
@@ -125,7 +141,6 @@ def run_auto_report_scheduler():
             current_date_str  = now.strftime("%Y-%m-%d")
             current_month_str = now.strftime("%Y-%m")
 
-            # ── Laporan Harian ────────────────────────────────
             if current_time_str == AUTO_REPORT_TIME and last_sent_date != current_date_str:
                 report_date = (now - timedelta(days=1)).strftime("%Y-%m-%d") if AUTO_REPORT_TIME == "00:00" else current_date_str
                 print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Scheduler harian aktif → {report_date}")
@@ -141,7 +156,6 @@ def run_auto_report_scheduler():
                 else:
                     print("Laporan harian kosong atau DB tidak terbaca.")
 
-            # ── Laporan Bulanan (tgl 1, jam 01:00) ───────────
             if current_time_str == "01:00" and now.day == 1 and last_sent_month != current_month_str:
                 prev = (now.replace(day=1) - timedelta(days=1))
                 prev_year, prev_month = prev.strftime("%Y"), prev.strftime("%m")
@@ -170,11 +184,10 @@ def run_auto_report_scheduler():
             print("Error di thread background scheduler:", e)
             time.sleep(30)
 
-
-# ── Main ─────────────────────────────────────────────────────
 if __name__ == '__main__':
     init_payroll_table()
     init_transaksi_table_migration()
+    init_absensi_migration()
 
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
         scheduler_thread = threading.Thread(target=run_auto_report_scheduler, daemon=True)
