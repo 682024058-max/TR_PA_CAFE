@@ -11,7 +11,7 @@ laporan_bp = Blueprint('laporan', __name__)
 def get_resend_key():
     return os.environ.get("RESEND_API_KEY")
 
-RESEND_SENDER = os.environ.get("RESEND_SENDER", "Kopi Sibei <onboarding@resend.dev>")
+RESEND_SENDER = os.environ.get("EMAIL_FROM", "Kopi Sibei <onboarding@resend.dev>")
 
 
 

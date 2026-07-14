@@ -11,7 +11,7 @@ payroll_bp = Blueprint('payroll', __name__)
 def _send_slip_email(id_payroll):
     """Kirim slip gaji via Resend API."""
     api_key = os.environ.get("RESEND_API_KEY")
-    sender  = os.environ.get("RESEND_SENDER", "Kopi Sibei <onboarding@resend.dev>")
+    sender  = os.environ.get("EMAIL_FROM", "Kopi Sibei <onboarding@resend.dev>")
 
     conn = None
     try:
