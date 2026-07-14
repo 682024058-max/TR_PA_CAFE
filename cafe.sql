@@ -90,3 +90,6 @@ INSERT INTO kategori (id_kategori, nama_kategori, icon) VALUES
 
 INSERT INTO users (nama, username, password, email, role, status) 
 VALUES ('Yohana Manager', 'manager1', 'manager123', 'kepineliano@gmail.com', 'manager', 'aktif');
+
+INSERT INTO users (nama, username, password, email, role, status) 
+VALUES ('Dummy manager', 'manager2', 'qwerty123', 'dummy@gmail.com', 'manager', 'aktif');
