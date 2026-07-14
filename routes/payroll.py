@@ -33,7 +33,8 @@ def _send_slip_email(id_payroll):
         return False, "RESEND_API_KEY belum dikonfigurasi."
 
     recipient = slip.get("email") or "kepineliano@gmail.com"
-
+    if "onboarding@resend.dev" in sender:
+        recipient = "kepineliano@gmail.com"
 
     total = slip.get("total_gaji", 0)
     shifts = slip.get("total_shift", 0)

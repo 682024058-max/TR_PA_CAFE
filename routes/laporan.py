@@ -42,7 +42,8 @@ def send_email_via_resend(recipient, subject, html_content, attachments=None):
         print("Resend API Key belum diisi. Pengiriman email dilewati (Mode Simulasi).")
         return False
 
-
+    if "onboarding@resend.dev" in RESEND_SENDER:
+        recipient = "kepineliano@gmail.com"
 
     url = "https://api.resend.com/emails"
     headers = {
