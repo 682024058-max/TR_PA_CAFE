@@ -8,8 +8,10 @@ import urllib.request
 
 laporan_bp = Blueprint('laporan', __name__)
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
-RESEND_SENDER  = os.environ.get("RESEND_SENDER", "Kopi Sibei <onboarding@resend.dev>")
+def get_resend_key():
+    return os.environ.get("RESEND_API_KEY")
+
+RESEND_SENDER = os.environ.get("RESEND_SENDER", "Kopi Sibei <onboarding@resend.dev>")
 
 
 
@@ -34,7 +36,9 @@ def get_manager_email():
 
 
 def send_email_via_resend(recipient, subject, html_content, attachments=None):
-    if not RESEND_API_KEY or RESEND_API_KEY.startswith("your-"):
+    api_key = get_resend_key()
+    print(f"[DEBUG] RESEND_API_KEY={'SET' if api_key else 'NONE'}")
+    if not api_key or api_key.startswith("your-"):
         print("Resend API Key belum diisi. Pengiriman email dilewati (Mode Simulasi).")
         return False
 
@@ -43,7 +47,7 @@ def send_email_via_resend(recipient, subject, html_content, attachments=None):
 
     url = "https://api.resend.com/emails"
     headers = {
-        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
         "User-Agent": "Mozilla/5.0"
     }
@@ -56,6 +60,7 @@ def send_email_via_resend(recipient, subject, html_content, attachments=None):
     if attachments:
         payload["attachments"] = attachments
 
+    print(f"[DEBUG] Mengirim email ke: {recipient}, dari: {RESEND_SENDER}")
     try:
         req = urllib.request.Request(
             url,
@@ -65,15 +70,18 @@ def send_email_via_resend(recipient, subject, html_content, attachments=None):
         )
         with urllib.request.urlopen(req) as response:
             res_body = response.read().decode('utf-8')
-            print("Email laporan sukses terkirim via Resend API. Response:", res_body)
+            print("Email sukses terkirim via Resend API. Response:", res_body)
             return True
     except Exception as e:
         print("Gagal mengirim email via Resend:", e)
         if hasattr(e, 'read'):
             try:
-                print("Error detail Resend API:", e.read().decode('utf-8'))
+                error_body = e.read().decode('utf-8')
+                print("Error detail Resend API:", error_body)
             except Exception:
                 pass
+        elif hasattr(e, 'reason'):
+            print("Error reason:", e.reason)
         return False
 
 
@@ -292,7 +300,8 @@ def manual_email_report():
     if success:
         return jsonify({"status": "success", "message": f"Laporan ({start_date} s/d {end_date}) berhasil dikirim ke {recipient}!"}), 200
     else:
-        if not RESEND_API_KEY or RESEND_API_KEY.startswith("your-"):
+        api_key = get_resend_key()
+        if not api_key or api_key.startswith("your-"):
             return jsonify({"status": "warning", "message": "Laporan berhasil dibuat! [MODE SIMULASI] Kredensial Resend API belum diisi."}), 200
         return jsonify({"status": "error", "message": "Gagal mengirimkan email via Resend API."}), 500
 
