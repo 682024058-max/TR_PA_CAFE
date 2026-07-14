@@ -1729,9 +1729,6 @@ async function kirimLaporanEmail() {
 window.pilihGambarTemplat  = function() {};
 window.perbaruiPratinjauGambarMenu = function() {};
 
-// ============================================================
-// ALIASES KOMPATIBILITAS (UNTUK KEAMANAN 100%)
-// ============================================================
 window.openModal = window.bukaModal;
 window.closeModal = window.tutupModal;
 window.showToast = window.tampilkanToast;
