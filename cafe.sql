@@ -93,3 +93,9 @@ VALUES ('Yohana Manager', 'manager1', 'manager123', 'kepineliano@gmail.com', 'ma
 
 INSERT INTO users (nama, username, password, email, role, status) 
 VALUES ('Dummy manager', 'manager2', 'qwerty123', 'dummy@gmail.com', 'manager', 'aktif');
+
+SHOW DATABASES;
+SELECT * FROM products LIMIT 10;
+
+USE cafe; -- Ganti 'cafe' dengan nama database kamu yang muncul di langkah 1
+SELECT * FROM products LIMIT 10;

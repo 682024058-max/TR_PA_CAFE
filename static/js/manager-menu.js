@@ -236,7 +236,6 @@ function inisialisasiCRUDKategori() {
     });
     
     document.getElementById("category-search")?.addEventListener("input", tampilkanTabelKategori);
-    document.getElementById("category-form")?.addEventListener("submit", tanganiKirimKategori);
 }
 
 async function tanganiKirimKategori(e) {

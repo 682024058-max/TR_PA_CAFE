@@ -23,7 +23,6 @@ function inisialisasiCRUDKasir() {
         if (pwInput) pwInput.required = true;
         bukaModal("cashier-modal");
     });
-    document.getElementById("cashier-form")?.addEventListener("submit", tanganiKirimKasir);
     document.getElementById("cashier-search")?.addEventListener("input", tampilkanTabelKasir);
 }
 
@@ -125,3 +124,4 @@ async function tanganiKirimKasir(e) {
         tampilkanToast("Gagal simpan kasir: " + e.message, "danger");
     }
 }
+window.tanganiKirimKasir = tanganiKirimKasir;

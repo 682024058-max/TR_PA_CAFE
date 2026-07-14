@@ -18,6 +18,19 @@
     
     
     <link rel="stylesheet" href="{{ url_for('static', filename='css/manager.css') }}">
+    <script>
+        (function() {
+            try {
+                const raw = localStorage.getItem('activeUser');
+                const role = localStorage.getItem('activeRole');
+                if (!raw || role !== 'manager') {
+                    window.location.href = 'login.html';
+                }
+            } catch(e) {
+                window.location.href = 'login.html';
+            }
+        })();
+    </script>
 </head>
 <body>
     
