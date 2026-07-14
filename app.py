@@ -76,7 +76,6 @@ def init_payroll_table():
                     FOREIGN KEY (id_kasir) REFERENCES users(id_user) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """)
-        print("Tabel penggajian berhasil diinisialisasi.")
     except Exception as e:
         print("Gagal menginisialisasi tabel penggajian:", e)
     finally:
@@ -91,9 +90,6 @@ def init_transaksi_table_migration():
             cur.execute("SHOW COLUMNS FROM transaksi LIKE 'bukti_tf'")
             if not cur.fetchone():
                 cur.execute("ALTER TABLE transaksi ADD COLUMN bukti_tf LONGTEXT DEFAULT NULL")
-                print("Kolom bukti_tf berhasil ditambahkan ke tabel transaksi.")
-            else:
-                print("Kolom bukti_tf sudah ada di tabel transaksi.")
     except Exception as e:
         print("Gagal melakukan migrasi tabel transaksi:", e)
     finally:
@@ -119,8 +115,6 @@ def init_absensi_migration():
                     WHERE a.id_user IS NULL
                 """)
                 print("Kolom id_user berhasil ditambahkan ke tabel absensi dan data lama di-backfill.")
-            else:
-                print("Kolom id_user sudah ada di tabel absensi.")
     except Exception as e:
         print("Gagal melakukan migrasi tabel absensi:", e)
     finally:
@@ -132,10 +126,6 @@ last_sent_month = None
 def run_auto_report_scheduler():
     global last_sent_date, last_sent_month
     from routes.laporan import build_sales_report_html, send_email_via_resend, get_manager_email
-
-    print("=" * 60)
-    print(f"  BACKGROUND SCHEDULER: Aktif (harian: {AUTO_REPORT_TIME}, bulanan: tgl 1 jam 01:00)")
-    print("=" * 60)
 
     while True:
         try:
@@ -196,8 +186,5 @@ if __name__ == '__main__':
         scheduler_thread = threading.Thread(target=run_auto_report_scheduler, daemon=True)
         scheduler_thread.start()
 
-    print("=" * 55)
-    print("  KOPI SIBEI BACKEND — sesuai struktur DB nyata")
-    print("  Status: http://127.0.0.1:5000/api/status")
-    print("=" * 55)
+
     app.run(debug=True, port=5000)
