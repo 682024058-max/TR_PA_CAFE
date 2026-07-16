@@ -1,4 +1,3 @@
-// kasir.js - Core initialization, global state and shared helpers for Cashier POS
 
 const API_BASE = '/api';
 
@@ -19,10 +18,10 @@ let currentAttendance = {
 };
 
 const KATEGORI_LABEL = {
-    'coffee'    : '☕ Coffee',
-    'non-coffee': '🥤 Non Coffee',
-    'snack'     : '🍿 Snack',
-    'dessert'   : '🍰 Dessert'
+    'coffee'    : 'Coffee',
+    'non-coffee': 'Non Coffee',
+    'snack'     : 'Snack',
+    'dessert'   : 'Dessert'
 };
 
 function headerApi() {
